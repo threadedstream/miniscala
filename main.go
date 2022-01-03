@@ -10,112 +10,105 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"text/scanner"
+	"unicode"
 )
 
 const (
 	asmForPlus = `
-	movq %d, %%rax\n
-	addq %d, %%rax
+	movq $%d, %%rax
+	addq $%d, %%rax
 	`
 
 	asmForMinus = `
-	movq %d, %%rax\n
-	subq %d, %%rax
+	movq $%d, %%rax
+	subq $%d, %%rax
 	`
 
 	asmForTimes = `
-	movq %d, %%rax\n
-	imulq %d, %%rax
+	movq $%d, %%rax
+	imulq $%d, %%rax
 	`
 
 	// the same applies to mod
 	asmForDiv = `
-	movq %d, %%rax
-	movq %d, %%rcx
+	movq $%d, %%rax
+	movq $%d, %%rcx
 	cltd 
 	idivq %%rcx
 	`
 )
 
-type Exp interface {
+// scanner
+
+func expected(s string) {
+	panic(fmt.Errorf("expected %s", s))
 }
 
-type Plus struct {
-	Exp
-	x int
-	y int
+type Reader struct {
+	scanner *scanner.Scanner
 }
 
-type Minus struct {
-	Exp
-	x int
-	y int
+func (r *Reader) hasNext() bool {
+	return r.scanner.Peek() != scanner.EOF
 }
 
-type Times struct {
-	Exp
-	x int
-	y int
+func (r *Reader) hasNextP(predicate func(rune) bool) bool {
+	return predicate(r.scanner.Peek())
 }
 
-type Div struct {
-	Exp
-	x int
-	y int
+func isOperator(c rune) bool {
+	return c == '+' || c == '-' || c == '*' || c == '/' || c == '%'
 }
 
-type Mod struct {
-	Exp
-	x int
-	y int
-}
-
-// kind of interpreter
-func eval(e Exp) int {
-	switch e.(type) {
-	case Plus:
-		plusExpr := e.(Plus)
-		return plusExpr.x + plusExpr.y
-	case Minus:
-		minusExpr := e.(Minus)
-		return minusExpr.x - minusExpr.y
-	case Times:
-		timesExpr := e.(Times)
-		return timesExpr.x * timesExpr.y
-	case Div:
-		divExpr := e.(Div)
-		return divExpr.x / divExpr.y
-	case Mod:
-		modExpr := e.(Mod)
-		return modExpr.x % modExpr.y
-	default:
-		panic(fmt.Errorf("encountered unknown node %v", e))
+func (r *Reader) getNum() int {
+	if r.hasNextP(unicode.IsDigit) {
+		n := 0
+		for r.hasNextP(unicode.IsDigit) {
+			n = 10*n + (int)(r.scanner.Next()-'0')
+		}
+		return n
+	} else {
+		expected("number")
 	}
+	// shouldn't reach this point
+	return 0
+}
+
+func (r *Reader) parseTerm() Exp {
+	return Plus{}
+}
+
+func (r *Reader) parseExpression() Exp {
+	var left = r.parseTerm()
+	if r.hasNextP(isOperator) {
+		var op = r.scanner.Next()
+		switch op {
+		case '+':
+			return Plus{x: left, y: r.parseTerm()}
+		default:
+			panic(fmt.Errorf("unknown operator %c", op))
+		}
+
+	} else {
+		expected("operator")
+		return Plus{}
+	}
+}
+
+func parse(code string) Exp {
+	var (
+		reader *Reader = &Reader{}
+		res            = reader.parseExpression()
+	)
+
+	if reader.hasNext() {
+		expected("EOF")
+	}
+	return res
 }
 
 // kind of compiler
-
-func trans(e Exp) string {
-	switch e.(type) {
-	case Plus:
-		plusExpr := e.(Plus)
-		return fmt.Sprintf(asmForPlus, plusExpr.x, plusExpr.y)
-	case Minus:
-		minusExpr := e.(Minus)
-		return fmt.Sprintf(asmForMinus, minusExpr.x, minusExpr.y)
-	case Times:
-		timesExpr := e.(Times)
-		return fmt.Sprintf(asmForTimes, timesExpr.x, timesExpr.y)
-	case Div:
-		divExpr := e.(Div)
-		return fmt.Sprintf(asmForDiv, divExpr.x, divExpr.y)
-	case Mod:
-		modExpr := e.(Mod)
-		return fmt.Sprintf(asmForDiv, modExpr.x, modExpr.y)
-	default:
-		panic(fmt.Errorf("encountered unknown node %v", e))
-	}
-}
 
 func prepareRuntimeLib() {
 	driverCode := `
@@ -129,7 +122,7 @@ func prepareRuntimeLib() {
 		}
 	`
 
-	handle, err := os.OpenFile("sources/driver.c", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	handle, err := os.OpenFile("sources/runtime.c", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		panic(err)
 	}
@@ -152,11 +145,11 @@ func run(code string) int {
 	}
 
 	driverCode := `
-		.text
-		.globl _miniscala_main
-		_miniscala_main:
-			%s
-			ret
+	.text
+	.globl miniscala_main
+	miniscala_main:
+	%s
+	ret
 	`
 
 	driverCode = fmt.Sprintf(driverCode, code)
@@ -170,10 +163,10 @@ func run(code string) int {
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("wrote %d bytes", bts)
+	fmt.Printf("wrote %d bytes", bts)
 	handle.Close()
 
-	compileCodeCmd := exec.Command("gcc", "runtime.o", "driver.s", "-o", "driver")
+	compileCodeCmd := exec.Command("gcc", "runtime.o", "sources/driver.s", "-o", "driver")
 	if err = compileCodeCmd.Run(); err != nil {
 		panic(err)
 	}
@@ -192,5 +185,5 @@ func run(code string) int {
 }
 
 func main() {
-	run(trans(Times{x: 20, y: 30}))
+	trans(Plus{x: Lit{x: 1}, y: Plus{x: Lit{x: 2}, y: Lit{x: 3}}}, 0)
 }

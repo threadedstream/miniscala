@@ -10,8 +10,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"text/scanner"
-	"unicode"
 )
 
 const (
@@ -40,73 +38,6 @@ const (
 )
 
 // scanner
-
-func expected(s string) {
-	panic(fmt.Errorf("expected %s", s))
-}
-
-type Reader struct {
-	scanner *scanner.Scanner
-}
-
-func (r *Reader) hasNext() bool {
-	return r.scanner.Peek() != scanner.EOF
-}
-
-func (r *Reader) hasNextP(predicate func(rune) bool) bool {
-	return predicate(r.scanner.Peek())
-}
-
-func isOperator(c rune) bool {
-	return c == '+' || c == '-' || c == '*' || c == '/' || c == '%'
-}
-
-func (r *Reader) getNum() int {
-	if r.hasNextP(unicode.IsDigit) {
-		n := 0
-		for r.hasNextP(unicode.IsDigit) {
-			n = 10*n + (int)(r.scanner.Next()-'0')
-		}
-		return n
-	} else {
-		expected("number")
-	}
-	// shouldn't reach this point
-	return 0
-}
-
-func (r *Reader) parseTerm() Exp {
-	return Plus{}
-}
-
-func (r *Reader) parseExpression() Exp {
-	var left = r.parseTerm()
-	if r.hasNextP(isOperator) {
-		var op = r.scanner.Next()
-		switch op {
-		case '+':
-			return Plus{x: left, y: r.parseTerm()}
-		default:
-			panic(fmt.Errorf("unknown operator %c", op))
-		}
-
-	} else {
-		expected("operator")
-		return Plus{}
-	}
-}
-
-func parse(code string) Exp {
-	var (
-		reader *Reader = &Reader{}
-		res            = reader.parseExpression()
-	)
-
-	if reader.hasNext() {
-		expected("EOF")
-	}
-	return res
-}
 
 // kind of compiler
 
@@ -185,5 +116,6 @@ func run(code string) int {
 }
 
 func main() {
-	trans(Plus{x: Lit{x: 1}, y: Plus{x: Lit{x: 2}, y: Lit{x: 3}}}, 0)
+	var tree = parse("(1+(2+(3+(4+(5+(6+(7+(8+(9+10)))))))))")
+	trans(tree)
 }

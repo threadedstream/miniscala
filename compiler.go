@@ -3,75 +3,71 @@ package main
 import "fmt"
 
 var (
-	regs = []string{"%rbx", "%rcx", "%rdi", "%rsi", "%r8", "%r9"}
+	regs   = []string{"%rax", "%rcx", "%rdx"}
+	sp     = 0
+	offset = 0
 )
 
-func transSsa(e Exp, sp int) {
-	switch e.(type) {
-	case Lit:
-		var literal = e.(Lit)
-		fmt.Printf("memory(%d) = %d\n", sp, literal.x)
-	case Plus:
-		plusExpr := e.(Plus)
-		transSsa(plusExpr.x, sp)
-		transSsa(plusExpr.y, sp+1)
-		fmt.Printf("memory(%d) += memory(%d)\n", sp, sp+1)
-	case Minus:
-		minusExpr := e.(Minus)
-		transSsa(minusExpr.x, sp)
-		transSsa(minusExpr.y, sp+1)
-		fmt.Printf("memory(%d) -= memory(%d)\n", sp, sp+1)
-	case Times:
-		timesExpr := e.(Times)
-		transSsa(timesExpr.x, sp)
-		transSsa(timesExpr.y, sp+1)
-		fmt.Printf("memory(%d) *= memory(%d)\n", sp, sp+1)
-	case Div:
-		divExpr := e.(Div)
-		transSsa(divExpr.x, sp)
-		transSsa(divExpr.y, sp+1)
-		fmt.Printf("memory(%d) /= memory(%d)\n", sp, sp+1)
-	case Mod:
-		modExpr := e.(Mod)
-		transSsa(modExpr.x, sp)
-		transSsa(modExpr.y, sp+1)
-		fmt.Printf("memory(%d) %%= memory(%d)\n", sp, sp+1)
-	default:
-		panic(fmt.Errorf("encountered unknown node %v", e))
+func mem(i int) string {
+	if i >= offset {
+		return regs[i%len(regs)]
+	} else {
+		return fmt.Sprintf("stack(%d)", i)
 	}
 }
 
-func trans(e Exp, sp int) {
+func grow() {
+	if sp == offset+len(regs) {
+		fmt.Printf("push %s # evict %d\n", mem(offset), offset)
+		offset += 1
+	}
+
+	sp += 1
+}
+
+func shrink() {
+	sp -= 1
+	if sp == offset {
+		offset -= 1
+		fmt.Printf("pop %s # reload %d\n", mem(offset), offset)
+	}
+}
+
+func trans(e Exp) {
 	switch e.(type) {
 	case Lit:
 		var literal = e.(Lit)
-		fmt.Printf("movq $%d, %s\n", literal.x, regs[sp])
-	case Plus:
-		var plusExpr = e.(Plus)
-		trans(plusExpr.x, sp)
-		trans(plusExpr.y, sp+1)
-		fmt.Printf("addq %s, %s\n", regs[sp+1], regs[sp])
-	case Minus:
-		minusExpr := e.(Minus)
-		trans(minusExpr.x, sp)
-		trans(minusExpr.y, sp+1)
-		fmt.Printf("subq %s, %s", regs[sp+1], regs[sp])
-	case Times:
-		timesExpr := e.(Times)
-		trans(timesExpr.x, sp)
-		trans(timesExpr.y, sp+1)
-		fmt.Printf("imulq %s, %s\n", regs[sp+1], regs[sp])
-	case Div:
-		divExpr := e.(Div)
-		trans(divExpr.x, sp)
-		trans(divExpr.y, sp+1)
-		fmt.Printf("movq %s, %%rax\ncltd\nidivq %s\nmovq %%rax, %s", regs[sp], regs[sp+1], regs[sp])
-	case Mod:
-		modExpr := e.(Mod)
-		trans(modExpr.x, sp)
-		trans(modExpr.y, sp+1)
-		fmt.Printf("movq %s, %%rax\ncltd\nidivq %s\nmovq %%rdx, %s", regs[sp], regs[sp+1], regs[sp])
-	default:
-		panic(fmt.Errorf("encountered unknown node %v", e))
+		grow()
+		fmt.Printf("movq $%d, %s # %d\n", literal.x, mem(sp-1), sp-1)
+	case Prim:
+		var prim = e.(Prim)
+		switch prim.op {
+		case "+":
+			trans(prim.xs[0])
+			trans(prim.xs[1])
+			shrink()
+			fmt.Printf("addq %s, %s\n", mem(sp), mem(sp-1))
+		case "-":
+			trans(prim.xs[0])
+			trans(prim.xs[1])
+			shrink()
+			fmt.Printf("subq %s, %s\n", mem(sp), mem(sp-1))
+		case "*":
+			trans(prim.xs[0])
+			trans(prim.xs[1])
+			shrink()
+			fmt.Printf("imulq %s, %s\n", mem(sp), mem(sp-1))
+		case "/":
+			trans(prim.xs[0])
+			trans(prim.xs[1])
+			shrink()
+			fmt.Printf("movq %s, %%rax\ncltd\nidivq %s\nmovq %%rax, %s\n", mem(sp), mem(sp-1), mem(sp))
+		case "%":
+			trans(prim.xs[0])
+			trans(prim.xs[1])
+			fmt.Printf("movq %s, %%rax\ncltd\nidivq %s\nmovq %%rdx, %s\n", mem(sp), mem(sp-1), mem(sp))
+		default:
+			expected(fmt.Sprintf("+, -, *, /, %%, but found %s", prim.op))
+		}
 	}
 }

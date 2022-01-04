@@ -15,6 +15,7 @@ func eval(e Exp, sp int) {
 	case Lit:
 		var literal Lit = e.(Lit)
 		memory[sp] = literal.x
+	// TODO(threadedstream): make a single huge Prim case
 	case Plus:
 		var plus = e.(Plus)
 		eval(plus.x, sp)

@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 const (
 	MEMSIZE = 1024
 )
@@ -10,38 +8,45 @@ var (
 	memory [MEMSIZE]int
 )
 
-func eval(e Exp, sp int) {
+func eval(e Exp, sp int, env map[string]int) {
 	switch e.(type) {
 	case Lit:
-		var literal Lit = e.(Lit)
+		var literal = e.(Lit)
 		memory[sp] = literal.x
 	// TODO(threadedstream): make a single huge Prim case
-	case Plus:
-		var plus = e.(Plus)
-		eval(plus.x, sp)
-		eval(plus.y, sp+1)
-		memory[sp] += memory[sp+1]
-	case Minus:
-		var minus = e.(Minus)
-		eval(minus.x, sp)
-		eval(minus.y, sp+1)
-		memory[sp] -= memory[sp+1]
-	case Times:
-		var times = e.(Times)
-		eval(times.x, sp)
-		eval(times.y, sp+1)
-		memory[sp] *= memory[sp+1]
-	case Div:
-		var div = e.(Div)
-		eval(div.x, sp)
-		eval(div.y, sp+1)
-		memory[sp] /= memory[sp+1]
-	case Mod:
-		var mod = e.(Mod)
-		eval(mod.x, sp)
-		eval(mod.y, sp+1)
-		memory[sp] %= memory[sp+1]
-	default:
-		panic(fmt.Errorf("unknown node %v", e))
+	case Prim:
+		var prim = e.(Prim)
+		switch prim.op {
+		case "+":
+			eval(prim.xs[0], sp, env)
+			eval(prim.xs[1], sp+1, env)
+			memory[sp] += memory[sp+1]
+		case "-":
+			eval(prim.xs[0], sp, env)
+			eval(prim.xs[1], sp+1, env)
+			memory[sp] -= memory[sp+1]
+		case "*":
+			eval(prim.xs[0], sp, env)
+			eval(prim.xs[1], sp+1, env)
+			memory[sp] *= memory[sp+1]
+		case "/":
+			eval(prim.xs[0], sp, env)
+			eval(prim.xs[1], sp+1, env)
+			memory[sp] /= memory[sp+1]
+		case "%":
+			eval(prim.xs[0], sp, env)
+			eval(prim.xs[1], sp, env)
+			memory[sp] %= memory[sp+1]
+		}
+
+	case Let:
+		var let = e.(Let)
+		eval(let.rhs, sp, env)
+		env[let.name] = sp
+		eval(let.body, sp+1, env)
+		memory[sp] = memory[sp+1]
+	case Var:
+		var variable = e.(Var)
+		memory[sp] = memory[env[variable.name]]
 	}
 }

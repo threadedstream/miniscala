@@ -115,7 +115,17 @@ func run(code string) int {
 	return res
 }
 
+func adHoc(object map[string]string) {
+	object["something"] = "hello"
+}
+
 func main() {
-	var tree = parse("(1+(2+(3+(4+(5+(6+(7+(8+(9+10)))))))))")
-	trans(tree)
+	var (
+		varName = "x"
+		rhs     = Lit{x: 10}
+		body    = Prim{op: "*", xs: []Exp{Var{name: "x"}, Lit{x: 2}}}
+		env     = make(map[string]int, 0)
+	)
+
+	eval(Let{name: varName, rhs: rhs, body: body}, 0, env)
 }

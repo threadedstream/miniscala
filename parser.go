@@ -4,23 +4,19 @@ import (
 	"fmt"
 	"strings"
 	"text/scanner"
-	"unicode"
 )
+
+type Parser struct {
+	reader *Reader
+}
+
+func (p *Parser) follows(c rune) bool {
+	//if p.reader.hasNextP()
+	return false
+}
 
 func expected(s string) {
 	panic(fmt.Errorf("expected %s", s))
-}
-
-type Reader struct {
-	scanner *scanner.Scanner
-}
-
-func (r *Reader) hasNext() bool {
-	return r.scanner.Peek() != scanner.EOF
-}
-
-func (r *Reader) hasNextP(predicate func(rune) bool) bool {
-	return predicate(r.scanner.Peek())
 }
 
 func (r *Reader) accept(c rune) {
@@ -29,24 +25,6 @@ func (r *Reader) accept(c rune) {
 	} else {
 		expected(string(c))
 	}
-}
-
-func isOperator(c rune) bool {
-	return c == '+' || c == '-' || c == '*' || c == '/' || c == '%'
-}
-
-func (r *Reader) getNum() int {
-	if r.hasNextP(unicode.IsDigit) {
-		n := 0
-		for r.hasNextP(unicode.IsDigit) {
-			n = 10*n + (int)(r.scanner.Next()-'0')
-		}
-		return n
-	} else {
-		expected("number")
-	}
-	// shouldn't reach this point
-	return 0
 }
 
 func (r *Reader) atom() Exp {

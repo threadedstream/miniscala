@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"text/scanner"
 	"unicode"
 )
@@ -36,6 +37,19 @@ type (
 		in        *CharScanner
 	}
 )
+
+func newCharScanner(reader io.Reader) *CharScanner {
+	var charScanner = new(CharScanner)
+	charScanner.s = charScanner.s.Init(reader)
+	return charScanner
+}
+
+func newTokenScanner(reader io.Reader) *TokenScanner {
+	var tokenScanner = new(TokenScanner)
+	tokenScanner.in = newCharScanner(reader)
+	tokenScanner.next()
+	return tokenScanner
+}
 
 func (cs *CharScanner) peek() rune {
 	return cs.s.Peek()

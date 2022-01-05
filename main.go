@@ -120,12 +120,7 @@ func adHoc(object map[string]string) {
 }
 
 func main() {
-	var (
-		varName = "x"
-		rhs     = Lit{x: 10}
-		body    = Prim{op: "*", xs: []Exp{Var{name: "x"}, Lit{x: 2}}}
-		env     = make(map[string]int, 0)
-	)
-
-	eval(Let{name: varName, rhs: rhs, body: body}, 0, env)
+	code := "val x = 5"
+	node := parse(code)
+	fmt.Printf("%x", node)
 }

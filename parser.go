@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"strings"
-	"text/scanner"
 )
 
 type Parser struct {
@@ -109,11 +108,15 @@ func (p *Parser) atom() Exp {
 			p.requireChar('}')
 			return x
 		}
+	default:
+		fmt.Printf("expected atom node")
+		return EmptyExp{}
 	}
+	return EmptyExp{}
 }
 
 func (p *Parser) simpl() Exp {
-	return EOF{}
+	return p.binOp(0)
 }
 
 func prec(op string) int {
@@ -138,30 +141,47 @@ func assoc(op string) int {
 	return -1
 }
 
-func (r *Reader) binOp(min int) Exp {
-	res := r.atom()
-	for r.hasNextP(isOperator) && prec(string(r.scanner.Peek())) >= min {
-		op := r.scanner.Peek()
-		r.scanner.Next()
-		nextMin := prec(string(op)) + assoc(string(op))
-		res = Prim{op: string(op), xs: []Exp{res, r.binOp(nextMin)}}
+func (p *Parser) binOp(min int) Exp {
+	res := p.atom()
+	for p.in.hasNextP(func(token Token) bool {
+		return p.isInfixOp(min, token)
+	}) {
+		op := p.name()
+		nextMin := prec(op) + assoc(op)
+		rhs := p.binOp(nextMin)
+		res = Prim{op: op, xs: []Exp{res, rhs}}
 	}
 
 	return res
 }
 
-func (r *Reader) expr() Exp {
-	return r.binOp(0)
+func (p *Parser) expr() Exp {
+	switch p.in.peekToken.(type) {
+	case Keyword:
+		var kwd = p.in.peekToken.(Keyword)
+		if kwd.x == "val" {
+			p.requireString("val")
+			var name = p.name()
+			p.requireChar('=')
+			var rhs = p.simpl()
+			p.requireChar(';')
+			var body = p.expr()
+			return Let{name: name, rhs: rhs, body: body}
+		}
+	default:
+		return p.simpl()
+	}
+	return EmptyExp{}
 }
 
 func parse(code string) Exp {
-	reader := &Reader{
-		scanner: new(scanner.Scanner),
+	reader := strings.NewReader(code)
+	var parser = &Parser{
+		in: newTokenScanner(reader),
 	}
-	reader.scanner = reader.scanner.Init(strings.NewReader(code))
-	res := reader.expr()
-	if reader.hasNext() {
-		expected("EOF")
+	res := parser.expr()
+	if parser.in.hasNext() {
+		panic("expected EOF")
 	}
 	return res
 }

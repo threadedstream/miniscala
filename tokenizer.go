@@ -6,8 +6,130 @@ import (
 	"unicode"
 )
 
-type Reader struct {
-	scanner *scanner.Scanner
+type (
+	Reader interface {
+		hasNext() bool
+	}
+
+	TokenReader interface {
+		Reader
+		peek() Token
+		hasNextP(func(Token) bool)
+		next() Token
+	}
+
+	CharReader interface {
+		Reader
+		peek() rune
+		hasNextP(func(rune) bool)
+		next() rune
+	}
+
+	CharScanner struct {
+		CharReader
+		s *scanner.Scanner
+	}
+
+	TokenScanner struct {
+		TokenReader
+		peekToken Token
+		in        *CharScanner
+	}
+)
+
+func (cs *CharScanner) peek() rune {
+	return cs.s.Peek()
+}
+
+func (cs *CharScanner) hasNext() bool {
+	return cs.s.Peek() != scanner.EOF
+}
+
+func (cs *CharScanner) hasNextP(f func(rune) bool) bool {
+	return f(cs.peek())
+}
+
+func (cs *CharScanner) next() rune {
+	return cs.s.Next()
+}
+
+func (ts *TokenScanner) hasNext() bool {
+	return ts.peek() != EOF{}
+}
+
+func (ts *TokenScanner) hasNextP(f func(Token) bool) bool {
+	return f(ts.peek())
+}
+
+func (ts *TokenScanner) next() Token {
+	temp := ts.getToken()
+
+	if _, ok := temp.(EOF); !ok {
+		ts.peekToken = temp
+	}
+
+	return temp
+}
+
+func (ts *TokenScanner) skipWhitespaces() {
+	for ts.in.hasNextP(unicode.IsSpace) {
+		ts.in.next()
+	}
+}
+
+func (ts *TokenScanner) getNum() Token {
+	if ts.in.hasNextP(unicode.IsDigit) {
+		n := 0
+		for ts.in.hasNextP(unicode.IsDigit) {
+			n = 10*n + (int)(ts.in.next()-'0')
+		}
+		return Number{x: n}
+	} else {
+		panic("expected number")
+	}
+}
+
+func (ts *TokenScanner) getRawToken() Token {
+	if ts.in.hasNextP(unicode.IsLetter) {
+		return ts.getName()
+	} else if ts.in.hasNextP(isOperator) {
+		return ts.getOperator()
+	} else if ts.in.hasNextP(unicode.IsDigit) {
+		return ts.getNum()
+	} else if ts.in.hasNextP(isDelim) {
+		return Delim{x: ts.in.next()}
+	} else if !ts.in.hasNext() {
+		return EOF{}
+	} else {
+		panic(fmt.Errorf("unexpected character %c", ts.in.peek()))
+	}
+}
+
+func (ts *TokenScanner) getToken() Token {
+	ts.skipWhitespaces()
+	return ts.getRawToken()
+}
+
+func (ts *TokenScanner) getName() Token {
+	var buf []rune
+	for ts.in.hasNextP(isAlphaNum) {
+		buf = append(buf, ts.in.next())
+	}
+	s := string(buf)
+
+	if isKeyword(s) {
+		return Keyword{x: s}
+	} else {
+		return Ident{x: s}
+	}
+}
+
+func (ts *TokenScanner) getOperator() Token {
+	if ts.in.hasNextP(isOperator) {
+		return Ident{x: string(ts.in.next())}
+	} else {
+		panic("expected operator")
+	}
 }
 
 func isKeyword(kwd string) bool {
@@ -24,73 +146,4 @@ func isOperator(c rune) bool {
 
 func isAlphaNum(c rune) bool {
 	return unicode.IsLetter(c) || unicode.IsDigit(c)
-}
-
-func (r *Reader) hasNext() bool {
-	return r.scanner.Peek() != scanner.EOF
-}
-
-func (r *Reader) hasNextP(predicate func(rune) bool) bool {
-	return predicate(r.scanner.Peek())
-}
-
-func (r *Reader) skipWhitespaces() {
-	for r.hasNextP(unicode.IsSpace) {
-		r.scanner.Next()
-	}
-}
-
-func (r *Reader) getNum() Token {
-	if r.hasNextP(unicode.IsDigit) {
-		n := 0
-		for r.hasNextP(unicode.IsDigit) {
-			n = 10*n + (int)(r.scanner.Next()-'0')
-		}
-		return Number{x: n}
-	} else {
-		panic("expected number")
-	}
-}
-
-func (r *Reader) getRawToken() Token {
-	if r.hasNextP(unicode.IsLetter) {
-		return r.getName()
-	} else if r.hasNextP(isOperator) {
-		return r.getOperator()
-	} else if r.hasNextP(unicode.IsDigit) {
-		return r.getNum()
-	} else if r.hasNextP(isDelim) {
-		return Delim{x: r.scanner.Next()}
-	} else if !r.hasNext() {
-		return EOF{}
-	} else {
-		panic(fmt.Errorf("unexpected character %c", r.scanner.Peek()))
-	}
-}
-
-func (r *Reader) getToken() Token {
-	r.skipWhitespaces()
-	return r.getRawToken()
-}
-
-func (r *Reader) getName() Token {
-	var buf []rune
-	for r.hasNextP(isAlphaNum) {
-		buf = append(buf, r.scanner.Next())
-	}
-	s := string(buf)
-
-	if isKeyword(s) {
-		return Keyword{x: s}
-	} else {
-		return Ident{x: s}
-	}
-}
-
-func (r *Reader) getOperator() Token {
-	if r.hasNextP(isOperator) {
-		return Ident{x: string(r.scanner.Next())}
-	} else {
-		panic("expected operator")
-	}
 }

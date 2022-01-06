@@ -2,17 +2,23 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	"os"
 )
 
 type Parser struct {
 	in *TokenScanner
 }
 
+func (p *Parser) skippedNewLine() bool {
+	return p.in.peekToken.pos().start.Line != p.in.peekToken.pos().gap.Line
+}
+
 func (p *Parser) followsChar(c rune) bool {
 	var delim = Delim{x: c}
 	if p.in.peekToken == delim {
 		p.in.next()
+		return true
+	} else if c == ';' && p.skippedNewLine() {
 		return true
 	}
 
@@ -48,7 +54,7 @@ func (p *Parser) requireString(s string) {
 	panic(fmt.Errorf("expected %s", s))
 }
 
-func (p *Parser) isName(x Token) bool {
+func (p *Parser) isName(x interface{}) bool {
 	switch x.(type) {
 	case Ident:
 		return true
@@ -57,7 +63,7 @@ func (p *Parser) isName(x Token) bool {
 	}
 }
 
-func (p *Parser) isNum(x Token) bool {
+func (p *Parser) isNum(x interface{}) bool {
 	switch x.(type) {
 	case Number:
 		return true
@@ -66,7 +72,7 @@ func (p *Parser) isNum(x Token) bool {
 	}
 }
 
-func (p *Parser) isInfixOp(min int, x Token) bool {
+func (p *Parser) isInfixOp(min int, x interface{}) bool {
 	switch x.(type) {
 	case Ident:
 		var ident = x.(Ident)
@@ -80,7 +86,8 @@ func (p *Parser) name() string {
 	if !p.in.hasNextP(p.isName) {
 		panic("expected name")
 	}
-	var ident = p.in.next().(Ident)
+	var ident = p.in.peekToken.(Ident)
+	p.in.next()
 	return ident.x
 }
 
@@ -108,10 +115,12 @@ func (p *Parser) atom() Exp {
 			p.requireChar('}')
 			return x
 		}
+		break
 	default:
 		fmt.Printf("expected atom node")
 		return EmptyExp{}
 	}
+
 	return EmptyExp{}
 }
 
@@ -143,9 +152,9 @@ func assoc(op string) int {
 
 func (p *Parser) binOp(min int) Exp {
 	res := p.atom()
-	for p.in.hasNextP(func(token Token) bool {
+	for p.in.hasNextP(func(token interface{}) bool {
 		return p.isInfixOp(min, token)
-	}) {
+	}) && !p.skippedNewLine() {
 		op := p.name()
 		nextMin := prec(op) + assoc(op)
 		rhs := p.binOp(nextMin)
@@ -174,10 +183,14 @@ func (p *Parser) expr() Exp {
 	return EmptyExp{}
 }
 
-func parse(code string) Exp {
-	reader := strings.NewReader(code)
+func parse(path string) Exp {
+	stream, err := os.Open(path)
+	if err != nil {
+		panic("no file with such path was found")
+	}
+
 	var parser = &Parser{
-		in: newTokenScanner(reader),
+		in: newTokenScanner(stream),
 	}
 	res := parser.expr()
 	if parser.in.hasNext() {

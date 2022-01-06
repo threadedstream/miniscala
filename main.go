@@ -115,12 +115,14 @@ func run(code string) int {
 	return res
 }
 
-func adHoc(object map[string]string) {
-	object["something"] = "hello"
-}
-
 func main() {
-	code := "val x = 5"
-	node := parse(code)
+	// val x = 5; x + 45
+	//
+	// x0 = 5
+	// x1 = x0
+	// x2 = 45
+	// x3 = x1 + x2
+	path := "sources/main.scala"
+	node := parse(path)
 	fmt.Printf("%x", node)
 }

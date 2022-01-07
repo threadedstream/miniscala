@@ -26,6 +26,7 @@ type (
 		rhs  Exp
 		body Exp
 	}
+
 	EmptyExp struct {
 		Exp
 	}

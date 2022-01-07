@@ -82,6 +82,8 @@ func (p *Parser) isInfixOp(min int, x Token) bool {
 	}
 }
 
+// val x = 4; x + 5
+
 func (p *Parser) name() string {
 	if !p.in.hasNextP(p.isName) {
 		panic("expected name")
@@ -114,14 +116,14 @@ func (p *Parser) atom() Exp {
 			var x = p.expr()
 			p.requireChar('}')
 			return x
+		default:
+			errorPos := p.in.pos()
+			panic(fmt.Errorf("[%d:%d] expected '(' or '{', but got %c", errorPos.Line, errorPos.Column, delim.x))
 		}
-		break
 	default:
-		panic("expected atom node")
-		return EmptyExp{}
+		errorPos := p.in.pos()
+		panic(fmt.Errorf("[%d:%d] expected number, identifier, or delimiter, but got %s", errorPos.Line, errorPos.Column, p.in.peekToken.str()))
 	}
-
-	return EmptyExp{}
 }
 
 func (p *Parser) simpl() Exp {

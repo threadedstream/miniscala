@@ -12,6 +12,12 @@ func check(e Exp, env map[string]bool) {
 			panic(fmt.Errorf("unbound variable %s", v.name))
 		}
 	case Prim:
-
+		prim := e.(Prim)
+		if !isOperator(rune(prim.op[0])) {
+			panic(fmt.Errorf("undefined operator %c", rune(prim.op[0])))
+		}
+		for _, x := range prim.xs {
+			check(x, env)
+		}
 	}
 }

@@ -130,14 +130,16 @@ func (ts *TokenScanner) skipWhitespaces() {
 }
 
 func (ts *TokenScanner) getNum() Number {
-	if ts.in.hasNextP(unicode.IsDigit) {
+	char := ts.in.next()
+	if unicode.IsDigit(char) {
 		n := 0
 		for ts.in.hasNextP(unicode.IsDigit) {
 			n = 10*n + (int)(ts.in.next()-'0')
 		}
 		return Number{x: n}
 	} else {
-		panic("expected number")
+		errorPos := ts.pos()
+		panic(fmt.Errorf("[%d:%d] expected a number, but got %c", errorPos.Line, errorPos.Column, char))
 	}
 }
 
@@ -165,7 +167,7 @@ func (ts *TokenScanner) getRawToken() Token {
 		return EOF{}
 	} else {
 		errPos := ts.pos()
-		panic(fmt.Errorf("unexpected character %c at %d:%d\n", ts.in.peek(), errPos.Line, errPos.Column))
+		panic(fmt.Errorf("[%d:%d] unexpected character %c", errPos.Line, errPos.Column, ts.in.peek()))
 	}
 }
 
@@ -218,10 +220,12 @@ func (ts *TokenScanner) getName() Token {
 }
 
 func (ts *TokenScanner) getOperator() Ident {
-	if ts.in.hasNextP(isOperator) {
-		return Ident{x: string(ts.in.next())}
+	var op = ts.in.next()
+	if isOperator(op) {
+		return Ident{x: string(op)}
 	} else {
-		panic("expected operator")
+		pos := ts.pos()
+		panic(fmt.Errorf("[%d:%d] expected operator, but got %c at ", pos.Line, pos.Column, op))
 	}
 }
 
@@ -233,8 +237,22 @@ func isDelim(c rune) bool {
 	return c == '{' || c == '}' || c == '(' || c == ')' || c == ';' || c == '='
 }
 
-func isOperator(c rune) bool {
-	return c == '+' || c == '-' || c == '*' || c == '/' || c == '%'
+func isOperator(op rune) bool {
+	switch op {
+	case '+', '-', '*', '/', '%':
+		return true
+	default:
+		return false
+	}
+}
+
+func isCondOp(op string) bool {
+	switch op {
+	case "==", "!=", "<", ">", "<=", ">=":
+		return true
+	default:
+		return false
+	}
 }
 
 func isAlphaNum(c rune) bool {

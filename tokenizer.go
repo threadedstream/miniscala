@@ -30,6 +30,7 @@ type (
 		CharReader
 		peekChar  rune
 		peekChar1 rune
+		buffer    string
 		s         *scanner.Scanner
 	}
 
@@ -47,7 +48,16 @@ func newCharScanner(reader io.Reader) *CharScanner {
 		s: new(scanner.Scanner),
 	}
 	charScanner.s = charScanner.s.Init(reader)
-	charScanner.peekChar = charScanner.s.Peek()
+	// heap allocated temporary buffer
+	var temp = make([]byte, 128)
+	_, err := reader.Read(temp)
+	if err != nil {
+		panic("newCharScanner() failed to read into buffer")
+	}
+	charScanner.buffer = string(temp)
+	// trigger gc
+	temp = nil
+	charScanner.peekChar = charScanner.s.Next()
 	charScanner.peekChar1 = charScanner.s.Next()
 	return charScanner
 }
@@ -73,11 +83,13 @@ func (cs *CharScanner) hasNextP(f func(rune) bool) bool {
 }
 
 func (cs *CharScanner) hasNextP2(f func(rune, rune) bool) bool {
-	return f(cs.peek())
+	return f(cs.peekChar, cs.peekChar1)
 }
 
 func (cs *CharScanner) next() rune {
-	return cs.s.Next()
+	cs.peekChar = cs.peekChar1
+	cs.peekChar1 = cs.s.Next()
+	return cs.peekChar
 }
 
 func (ts *TokenScanner) hasNext() bool {
@@ -102,13 +114,18 @@ func (ts *TokenScanner) pos() scanner.Position {
 	return ts.in.s.Pos()
 }
 
-func (ts *TokenScanner) isCommentStart(c1, c2 rune) bool {
+func isCommentStart(c1, c2 rune) bool {
 	return c1 == '/' && c2 == '/'
 }
 
 func (ts *TokenScanner) skipWhitespaces() {
-	for ts.in.hasNextP(unicode.IsSpace) || ts.in.hasNextP2() {
-		ts.in.next()
+	for ts.in.hasNextP(unicode.IsSpace) || ts.in.hasNextP2(isCommentStart) {
+		if ts.in.peekChar == '/' {
+			ts.in.next()
+			for ts.in.peekChar != '\n' && ts.in.peekChar != scanner.EOF {
+				ts.in.next()
+			}
+		}
 	}
 }
 
@@ -124,6 +141,17 @@ func (ts *TokenScanner) getNum() Number {
 	}
 }
 
+//func pointToSource(si SourceInfo) {
+//	var width = 0
+//	if si.end.Line == si.start.Line {
+//		width = si.end.Column - si.start.Column
+//	} else {
+//		width = 0
+//	}
+//	beginning := si.start.Line * si.start.Column
+//	substr :=
+//}
+
 func (ts *TokenScanner) getRawToken() Token {
 	if ts.in.hasNextP(unicode.IsLetter) {
 		return ts.getName()
@@ -136,7 +164,8 @@ func (ts *TokenScanner) getRawToken() Token {
 	} else if !ts.in.hasNext() {
 		return EOF{}
 	} else {
-		panic(fmt.Errorf("unexpected character %c", ts.in.peek()))
+		errPos := ts.pos()
+		panic(fmt.Errorf("unexpected character %c at %d:%d\n", ts.in.peek(), errPos.Line, errPos.Column))
 	}
 }
 

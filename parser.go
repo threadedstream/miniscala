@@ -54,7 +54,7 @@ func (p *Parser) requireString(s string) {
 	panic(fmt.Errorf("expected %s", s))
 }
 
-func (p *Parser) isName(x interface{}) bool {
+func (p *Parser) isName(x Token) bool {
 	switch x.(type) {
 	case Ident:
 		return true
@@ -63,7 +63,7 @@ func (p *Parser) isName(x interface{}) bool {
 	}
 }
 
-func (p *Parser) isNum(x interface{}) bool {
+func (p *Parser) isNum(x Token) bool {
 	switch x.(type) {
 	case Number:
 		return true
@@ -72,7 +72,7 @@ func (p *Parser) isNum(x interface{}) bool {
 	}
 }
 
-func (p *Parser) isInfixOp(min int, x interface{}) bool {
+func (p *Parser) isInfixOp(min int, x Token) bool {
 	switch x.(type) {
 	case Ident:
 		var ident = x.(Ident)
@@ -117,7 +117,7 @@ func (p *Parser) atom() Exp {
 		}
 		break
 	default:
-		fmt.Printf("expected atom node")
+		panic("expected atom node")
 		return EmptyExp{}
 	}
 
@@ -152,7 +152,7 @@ func assoc(op string) int {
 
 func (p *Parser) binOp(min int) Exp {
 	res := p.atom()
-	for p.in.hasNextP(func(token interface{}) bool {
+	for p.in.hasNextP(func(token Token) bool {
 		return p.isInfixOp(min, token)
 	}) && !p.skippedNewLine() {
 		op := p.name()

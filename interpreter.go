@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 )
 
@@ -30,13 +29,6 @@ func add(v1, v2 Value) Value {
 		}
 	} else {
 		realValue2 = v2
-	}
-
-	if reflect.TypeOf(realValue1.value) != reflect.TypeOf(realValue2.value) {
-		return Value{
-			value:     nil,
-			valueType: Undefined,
-		}
 	}
 
 	switch realValue1.value.(type) {
@@ -82,13 +74,6 @@ func sub(v1, v2 Value) Value {
 		realValue2 = v2
 	}
 
-	if reflect.TypeOf(realValue1.value) != reflect.TypeOf(realValue2.value) {
-		return Value{
-			value:     nil,
-			valueType: Undefined,
-		}
-	}
-
 	switch realValue1.value.(type) {
 	case float64:
 		return Value{
@@ -125,13 +110,6 @@ func mul(v1, v2 Value) Value {
 		}
 	} else {
 		realValue2 = v2
-	}
-
-	if reflect.TypeOf(realValue1.value) != reflect.TypeOf(realValue2.value) {
-		return Value{
-			value:     nil,
-			valueType: Undefined,
-		}
 	}
 
 	switch realValue1.value.(type) {
@@ -199,16 +177,19 @@ func visitExpr(expr Expr) Value {
 		case PlusOp:
 			lhsValue := visitExpr(operation.lhs)
 			rhsValue := visitExpr(operation.rhs)
+			checkOpValues(PlusOp, lhsValue, rhsValue)
 			value := add(lhsValue, rhsValue)
 			return value
 		case MinusOp:
 			lhsValue := visitExpr(operation.lhs)
 			rhsValue := visitExpr(operation.rhs)
+			checkOpValues(MinusOp, lhsValue, rhsValue)
 			value := sub(lhsValue, rhsValue)
 			return value
 		case MulOp:
 			lhsValue := visitExpr(operation.lhs)
 			rhsValue := visitExpr(operation.rhs)
+			checkOpValues(MulOp, lhsValue, rhsValue)
 			value := mul(lhsValue, rhsValue)
 			return value
 		default:

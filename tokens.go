@@ -1,85 +1,79 @@
 package main
 
-import (
-	"fmt"
-	"text/scanner"
-)
-import "C"
+import "text/scanner"
+
+type Token interface {
+	Pos() scanner.Position
+	Text() string
+}
+
+type tok struct {
+	text string
+	pos  scanner.Position
+}
 
 type (
-	SourceInfo struct {
-		file  string
-		gap   scanner.Position
-		start scanner.Position
-		end   scanner.Position
+	TokenVar struct {
+		tok
+	}
+
+	TokenVal struct {
+		tok
+	}
+
+	TokenSemicolon struct {
+		tok
+	}
+
+	TokenAssign struct {
+		tok
+	}
+
+	TokenPlus struct {
+		tok
+	}
+
+	TokenMinus struct {
+		tok
+	}
+
+	TokenMul struct {
+		tok
+	}
+
+	TokenIdent struct {
+		name string
+		tok
+	}
+
+	TokenNumber struct {
+		value float64
+		tok
+	}
+
+	TokenString struct {
+		value string
+		tok
 	}
 )
 
-type (
-	Token interface {
-		pos() SourceInfo
-		str() string
-	}
+//const (
+//	TokenVar int = iota
+//	TokenVal
+//	TokenSemicolon
+//	TokenAssign
+//	TokenPlus
+//	TokenMinus
+//	TokenMul
+//	TokenIdent
+//  TokenNumber
+//  TokenString
+//)
 
-	EOF struct {
-		Token
-	}
-
-	Number struct {
-		Token
-		x        int
-		position SourceInfo
-	}
-
-	Ident struct {
-		Token
-		x        string
-		position SourceInfo
-	}
-
-	Keyword struct {
-		Token
-		x        string
-		position SourceInfo
-	}
-
-	Delim struct {
-		Token
-		x        rune
-		position SourceInfo
-	}
-)
-
-// TODO(threadedstream): what should i replace it with?
-
-func (n Number) str() string {
-	return fmt.Sprintf("%d", n.x)
+func (t *tok) Pos() scanner.Position {
+	return t.pos
 }
 
-func (n Number) pos() SourceInfo {
-	return n.position
-}
-
-func (i Ident) str() string {
-	return i.x
-}
-
-func (i Ident) pos() SourceInfo {
-	return i.position
-}
-
-func (k Keyword) str() string {
-	return k.x
-}
-
-func (k Keyword) pos() SourceInfo {
-	return k.position
-}
-
-func (d Delim) str() string {
-	return string(d.x)
-}
-
-func (d Delim) pos() SourceInfo {
-	return d.position
+func (t *tok) Text() string {
+	return t.text
 }

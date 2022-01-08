@@ -116,13 +116,51 @@ func run(code string) int {
 }
 
 func main() {
-	// val x = 5; x + 45
-	//
-	// x0 = 5
-	// x1 = x0
-	// x2 = 45
-	// x3 = x1 + x2
-	path := "sources/main.scala"
-	node := parse(path)
-	fmt.Printf("%x", node)
+	//path := "sources/main.scala"
+	//node := parse(path)
+	//fmt.Printf("%x", node)
+
+	// val x = 56
+	// var y = x + 43
+
+	// val x = 56
+	// var y = (x + 43) + 90
+	valXDecl := ValDecl{
+		name: Name{value: "x"},
+		rhs: &BasicLit{
+			value: "56",
+			kind:  FloatLit,
+		},
+	}
+
+	varYDecl := VarDecl{
+		name: Name{value: "y"},
+		rhs: &Operation{
+			op: PlusOp,
+			lhs: &Operation{
+				op:  PlusOp,
+				lhs: &Name{value: "x"},
+				rhs: &BasicLit{
+					value: "43",
+					kind:  FloatLit,
+				},
+			},
+			rhs: &BasicLit{
+				value: "90",
+				kind:  FloatLit,
+			},
+		},
+	}
+
+	program := Program{
+		nodeList: []Node{
+			&valXDecl, &varYDecl,
+		},
+	}
+
+	execute(program)
+
+	for key, value := range globalObjectMap {
+		fmt.Printf("%s - %v\n", key, value)
+	}
 }

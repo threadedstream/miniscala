@@ -1,33 +1,83 @@
 package main
 
+import "text/scanner"
+
+type Operator int
+
+const (
+	PlusOp Operator = iota
+	MinusOp
+	MulOp
+)
+
+type SourceInfo struct {
+	start scanner.Position
+	end   scanner.Position
+}
+
+type Node interface {
+	Pos() SourceInfo
+}
+
+type node struct {
+	pos SourceInfo
+}
+
+func (n *node) Pos() SourceInfo {
+	return n.pos
+}
+
+type Program struct {
+	nodeList []Node
+	EOF      scanner.Position
+	node
+}
+
 type (
-	Exp interface {
+	VarDecl struct {
+		name Name
+		rhs  Expr
+		node
 	}
 
-	Lit struct {
-		Exp
-		x int
+	ValDecl struct {
+		name Name
+		rhs  Expr
+		node
+	}
+)
+
+type (
+	Expr interface {
+		Node
 	}
 
-	Prim struct {
-		Exp
-		op string
-		xs []Exp
+	Operation struct {
+		op  Operator
+		lhs Expr
+		rhs Expr
+		expr
 	}
 
-	Var struct {
-		Exp
-		name string
+	BasicLit struct {
+		value string
+		kind  LitKind
+		expr
 	}
 
-	Let struct {
-		Exp
-		name string
-		rhs  Exp
-		body Exp
+	Name struct {
+		value string
+		expr
 	}
+)
 
-	EmptyExp struct {
-		Exp
-	}
+type expr struct {
+	node
+}
+
+type LitKind uint8
+
+const (
+	StringLit LitKind = iota
+	FloatLit
 )

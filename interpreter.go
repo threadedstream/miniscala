@@ -5,7 +5,9 @@ import (
 	"strconv"
 )
 
-var globalObjectMap = make(map[string]Value)
+var (
+	environment = make(map[string]Value)
+)
 
 func add(v1, v2 Value) Value {
 	var (
@@ -14,7 +16,7 @@ func add(v1, v2 Value) Value {
 	)
 
 	if v1.valueType == Ref {
-		realValue1, ok = globalObjectMap[v1.asString()]
+		realValue1, ok = environment[v1.asString()]
 		if !ok {
 			panic(fmt.Errorf("no entry with name %s was found in a global object map", v1.value.(string)))
 		}
@@ -23,7 +25,7 @@ func add(v1, v2 Value) Value {
 	}
 
 	if v2.valueType == Ref {
-		realValue2, ok = globalObjectMap[v2.asString()]
+		realValue2, ok = environment[v2.asString()]
 		if !ok {
 			panic(fmt.Errorf("no entry with name %s was found in a global object map", v2.value.(string)))
 		}
@@ -57,7 +59,7 @@ func sub(v1, v2 Value) Value {
 	)
 
 	if v1.valueType == Ref {
-		realValue1, ok = globalObjectMap[v1.asString()]
+		realValue1, ok = environment[v1.asString()]
 		if !ok {
 			panic(fmt.Errorf("no entry with name %s was found in a global object map", v1.asString()))
 		}
@@ -66,7 +68,7 @@ func sub(v1, v2 Value) Value {
 	}
 
 	if v2.valueType == Ref {
-		realValue2, ok = globalObjectMap[v2.asString()]
+		realValue2, ok = environment[v2.asString()]
 		if !ok {
 			panic(fmt.Errorf("no entry with name %s was found in a global object map", v2.asString()))
 		}
@@ -95,7 +97,7 @@ func mul(v1, v2 Value) Value {
 	)
 
 	if v1.valueType == Ref {
-		realValue1, ok = globalObjectMap[v1.asString()]
+		realValue1, ok = environment[v1.asString()]
 		if !ok {
 			panic(fmt.Errorf("no entry with name %s was found in a global object map", v1.asString()))
 		}
@@ -104,7 +106,7 @@ func mul(v1, v2 Value) Value {
 	}
 
 	if v2.valueType == Ref {
-		realValue2, ok = globalObjectMap[v2.asString()]
+		realValue2, ok = environment[v2.asString()]
 		if !ok {
 			panic(fmt.Errorf("no entry with name %s was found in a global object map", v2.asString()))
 		}
@@ -141,12 +143,12 @@ func visitDecl(node Node) {
 		varDecl := node.(*VarDecl)
 		value := visitExpr(varDecl.rhs)
 		value.immutable = false
-		globalObjectMap[varDecl.name.value] = value
+		environment[varDecl.name.value] = value
 	case *ValDecl:
 		valDecl := node.(*ValDecl)
 		value := visitExpr(valDecl.rhs)
 		value.immutable = true
-		globalObjectMap[valDecl.name.value] = value
+		environment[valDecl.name.value] = value
 	}
 }
 
@@ -171,6 +173,25 @@ func visitExpr(expr Expr) Value {
 			v.value = basicLit.value
 		}
 		return v
+	case *IfStmt:
+		// TODO(threadedstream):
+		return Value{}
+	case *WhileStmt:
+		//TODO(threadedstream):
+		return Value{}
+	case *Assignment:
+		assignment := expr.(*Assignment)
+		lhsValue := visitExpr(assignment.rhs)
+		if lhsValue.valueType != Ref {
+			panic("lhs value in assignment should have a value type Ref")
+		}
+		rhsValue := visitExpr(assignment.lhs)
+		if err := checkAssignmentValidity(lhsValue.value.(string)); err != nil {
+			panic(err)
+		}
+		environment[lhsValue.value.(string)] = rhsValue
+		// for now, return a dummy value object
+		return Value{}
 	case *Operation:
 		operation := expr.(*Operation)
 		switch operation.op {

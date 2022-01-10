@@ -1,5 +1,10 @@
 package main
 
+import (
+	"errors"
+	"fmt"
+)
+
 //func check(e Exp, env map[string]bool) {
 //	switch e.(type) {
 //	case Lit:
@@ -44,4 +49,19 @@ func checkOpValues(op Operator, v1, v2 Value) {
 	default:
 		panic("unknown operation")
 	}
+}
+
+func checkAssignmentValidity(name string) error {
+	// first, check against the presence of value associated with name
+	value, ok := environment[name]
+	if !ok {
+		return fmt.Errorf("no entry with name %s was found", name)
+	}
+
+	// second, check against the possibility to change this value
+	if value.immutable {
+		return errors.New("attempt to override val value")
+	}
+
+	return nil
 }

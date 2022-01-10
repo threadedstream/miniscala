@@ -52,6 +52,12 @@ type (
 		Node
 	}
 
+	Assignment struct {
+		lhs Expr
+		rhs Expr
+		expr
+	}
+
 	Operation struct {
 		op  Operator
 		lhs Expr
@@ -72,6 +78,29 @@ type (
 )
 
 type expr struct {
+	node
+}
+
+type (
+	Statement interface {
+		Node
+	}
+
+	WhileStmt struct {
+		cond Operation
+		body Expr
+		statement
+	}
+
+	IfStmt struct {
+		cond     Operation
+		body     Expr
+		elseBody Expr
+		statement
+	}
+)
+
+type statement struct {
 	node
 }
 

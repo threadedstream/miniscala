@@ -1,5 +1,7 @@
 package main
 
+import "text/scanner"
+
 //
 //import (
 //	"fmt"
@@ -8,41 +10,42 @@ package main
 //	"unicode"
 //)
 //
-//type (
-//	Reader interface {
-//		hasNext() bool
-//	}
-//
-//	TokenReader interface {
-//		Reader
-//		peek() Token
-//		hasNextP(func(Token) bool)
-//		next() Token
-//	}
-//
-//	CharReader interface {
-//		Reader
-//		peek() rune
-//		hasNextP(func(rune) bool)
-//		next() rune
-//	}
-//
-//	CharScanner struct {
-//		CharReader
-//		peekChar  rune
-//		peekChar1 rune
-//		buffer    string
-//		s         *scanner.Scanner
-//	}
-//
-//	TokenScanner struct {
-//		TokenReader
-//		peekToken  Token
-//		peekToken1 Token
-//		in         *CharScanner
-//		position   scanner.Position
-//	}
-//)
+type (
+	Reader interface {
+		hasNext() bool
+	}
+
+	TokenReader interface {
+		Reader
+		peek() Token
+		hasNextP(func(Token) bool)
+		next() Token
+	}
+
+	CharReader interface {
+		Reader
+		peek() rune
+		hasNextP(func(rune) bool)
+		next() rune
+	}
+
+	CharScanner struct {
+		CharReader
+		peekChar  rune
+		peekChar1 rune
+		buffer    string
+		s         *scanner.Scanner
+	}
+
+	TokenScanner struct {
+		TokenReader
+		peekToken  Token
+		peekToken1 Token
+		in         *CharScanner
+		position   scanner.Position
+	}
+)
+
 //
 //func newCharScanner(reader io.Reader) *CharScanner {
 //	var charScanner = &CharScanner{

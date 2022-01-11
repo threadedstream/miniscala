@@ -120,47 +120,87 @@ func main() {
 	//node := parse(path)
 	//fmt.Printf("%x", node)
 
-	// val x = 56
-	// var y = x + 43
-
-	// val x = 56
+	// var x = 56
 	// var y = (x + 43) + 90
-	valXDecl := ValDecl{
-		name: Name{value: "x"},
-		rhs: &BasicLit{
-			value: "56",
-			kind:  FloatLit,
-		},
-	}
+	// if y == 99
+	// 		x = 1
+	// else
+	//	 	x = 20
+	// while x > 0
+	// 		x = x - 1
+	//varXDecl := VarDeclStmt{
+	//	name: Name{value: "x"},
+	//	rhs: &BasicLit{
+	//		value: "56",
+	//		kind:  FloatLit,
+	//	},
+	//}
+	//
+	//varYDecl := VarDeclStmt{
+	//	name: Name{value: "y"},
+	//	rhs: &Operation{
+	//		op: PlusOp,
+	//		lhs: &Operation{
+	//			op:  PlusOp,
+	//			lhs: &Name{value: "x"},
+	//			rhs: &BasicLit{
+	//				value: "43",
+	//				kind:  FloatLit,
+	//			},
+	//		},
+	//		rhs: &BasicLit{
+	//			value: "90",
+	//			kind:  FloatLit,
+	//		},
+	//	},
+	//}
 
-	varYDecl := VarDecl{
-		name: Name{value: "y"},
-		rhs: &Operation{
-			op: PlusOp,
-			lhs: &Operation{
-				op:  PlusOp,
-				lhs: &Name{value: "x"},
-				rhs: &BasicLit{
-					value: "43",
-					kind:  FloatLit,
-				},
-			},
-			rhs: &BasicLit{
-				value: "90",
-				kind:  FloatLit,
-			},
-		},
-	}
+	//defDecl := DefDeclStmt{
+	//	name: &Name{value: "fib"},
+	//	body: &BlockStmt{
+	//		stmts: []Stmt{},
+	//	},
+	//}
 
-	program := Program{
-		nodeList: []Node{
-			&valXDecl, &varYDecl,
-		},
-	}
+	//whileStmtAssignment := &Assignment{
+	//	lhs: &Name{value: "x"},
+	//	rhs: &Operation{
+	//		op:  MinusOp,
+	//		lhs: &Name{value: "x"},
+	//		rhs: &BasicLit{
+	//			value: "1",
+	//			kind:  FloatLit,
+	//		},
+	//	},
+	//},
+	//
+	//
+	//whileStmt := WhileStmt{
+	//	cond: Operation{
+	//		op:  GreaterThan,
+	//		lhs: &Name{value: "x"},
+	//		rhs: &BasicLit{
+	//			value: "0",
+	//			kind:  FloatLit,
+	//		},
+	//	},
+	//	body: &BlockStmt{
+	//		[]Stmt{
+	//			whileStmtAssignment,
+	//		},
+	//	},
+	//}
 
-	execute(program)
+	//program := Program{
+	//stmtList: []Stmt{
+	//	&varXDecl, &varYDecl,
+	//	&ifStmt, &whileStmt,
+	//	},
+	//}
 
-	for key, value := range globalObjectMap {
-		fmt.Printf("%s - %v\n", key, value)
-	}
+	//execute(program)
+	//
+	//for k, v := range environment {
+	//	fmt.Printf("%s - %v\n", k, v)
+	//}
 }

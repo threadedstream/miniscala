@@ -55,6 +55,14 @@ type (
 		value string
 		tok
 	}
+
+	TokenWhile struct {
+		tok
+	}
+
+	TokenIf struct {
+		tok
+	}
 )
 
 //const (

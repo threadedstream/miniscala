@@ -5,32 +5,19 @@ import (
 	"fmt"
 )
 
-//func check(e Exp, env map[string]bool) {
-//	switch e.(type) {
-//	case Lit:
-//		break
-//	case Var:
-//		v := e.(Var)
-//		if !env[v.name] {
-//			panic(fmt.Errorf("unbound variable %s", v.name))
-//		}
-//	case Prim:
-//		prim := e.(Prim)
-//		if !isOperator(rune(prim.op[0])) {
-//			panic(fmt.Errorf("undefined operator %c", rune(prim.op[0])))
-//		}
-//		for _, x := range prim.xs {
-//			check(x, env)
-//		}
-//	}
-//}
-
 func checkOpValues(op Operator, v1, v2 Value) {
-	if v1.valueType != Literal && v2.valueType != Literal {
-		panic("v1 and v2 must be of literal type")
+
+	if v1.valueType == Ref {
+		v1 = environment[v1.asString()]
+	}
+
+	if v2.valueType == Ref {
+		v2 = environment[v2.asString()]
 	}
 
 	switch op {
+	default:
+		panic("unknown operation")
 	case PlusOp:
 		if (v1.isString() && v2.isString()) || (v1.isFloat() && v2.isFloat()) {
 			return
@@ -46,8 +33,6 @@ func checkOpValues(op Operator, v1, v2 Value) {
 			return
 		}
 		panic("v1 and v2 must both be of type float")
-	default:
-		panic("unknown operation")
 	}
 }
 
@@ -64,4 +49,13 @@ func checkAssignmentValidity(name string) error {
 	}
 
 	return nil
+}
+
+func resolveRef(v1 Value) Value {
+	switch {
+	default:
+		return v1
+	case v1.valueType == Ref:
+		return lookup(v1.asString())
+	}
 }

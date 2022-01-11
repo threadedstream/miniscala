@@ -2,85 +2,102 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 )
 
-var (
-	environment = make(map[string]Value)
-)
-
-func add(v1, v2 Value) Value {
+func isCondTrue(cond Operation) bool {
+	isComparisonOp(cond.op)
 	var (
-		realValue1, realValue2 Value
-		ok                     bool
+		lhs = visitExpr(cond.lhs)
+		rhs = visitExpr(cond.rhs)
 	)
 
+	lhs = resolveRef(lhs)
+	rhs = resolveRef(rhs)
+
+	switch cond.op {
+	default:
+		return false
+	case GreaterThan:
+		if lhs.isString() && rhs.isString() {
+			return lhs.asString() > rhs.asString()
+		} else if lhs.isFloat() && rhs.isFloat() {
+			return lhs.asFloat() > rhs.asFloat()
+		} else {
+			panic("cast to string and float was unsuccessful")
+		}
+	case GreaterThanOrEqual:
+		if lhs.isString() && rhs.isString() {
+			return lhs.asString() >= rhs.asString()
+		} else if lhs.isFloat() && rhs.isFloat() {
+			return lhs.asFloat() >= rhs.asFloat()
+		} else {
+			panic("cast to string and float was unsuccessful")
+		}
+	case LessThan:
+		if lhs.isString() && rhs.isString() {
+			return lhs.asString() < rhs.asString()
+		} else if lhs.isFloat() && rhs.isFloat() {
+			return lhs.asFloat() <= rhs.asFloat()
+		} else {
+			panic("cast to string and float was unsuccessful")
+		}
+	case LessThanOrEqual:
+		if lhs.isString() && rhs.isString() {
+			return lhs.asString() < rhs.asString()
+		} else if lhs.isFloat() && rhs.isFloat() {
+			return lhs.asFloat() <= rhs.asFloat()
+		} else {
+			panic("cast to string and float was unsuccessful")
+		}
+	case Equal:
+		return lhs.value == rhs.value
+	case NotEqual:
+		return lhs.value != rhs.value
+	}
+}
+
+func add(v1, v2 Value) Value {
 	if v1.valueType == Ref {
-		realValue1, ok = environment[v1.asString()]
-		if !ok {
-			panic(fmt.Errorf("no entry with name %s was found in a global object map", v1.value.(string)))
-		}
-	} else {
-		realValue1 = v1
+		v1 = lookup(v1.asString())
 	}
-
 	if v2.valueType == Ref {
-		realValue2, ok = environment[v2.asString()]
-		if !ok {
-			panic(fmt.Errorf("no entry with name %s was found in a global object map", v2.value.(string)))
-		}
-	} else {
-		realValue2 = v2
+		v2 = lookup(v2.asString())
 	}
 
-	switch realValue1.value.(type) {
-	case float64:
-		return Value{
-			value:     realValue1.asFloat() + realValue2.asFloat(),
-			valueType: Literal,
-		}
-	case string:
-		return Value{
-			value:     realValue1.asString() + realValue2.asString(),
-			valueType: Literal,
-		}
+	switch v1.value.(type) {
 	default:
 		return Value{
 			value:     nil,
 			valueType: Undefined,
 		}
+	case float64:
+		return Value{
+			value:     v1.asFloat() + v2.asFloat(),
+			valueType: Float,
+		}
+	case string:
+		return Value{
+			value:     v1.asString() + v2.asString(),
+			valueType: String,
+		}
 	}
 }
 
 func sub(v1, v2 Value) Value {
-	var (
-		realValue1, realValue2 Value
-		ok                     bool
-	)
-
 	if v1.valueType == Ref {
-		realValue1, ok = environment[v1.asString()]
-		if !ok {
-			panic(fmt.Errorf("no entry with name %s was found in a global object map", v1.asString()))
-		}
-	} else {
-		realValue1 = v1
+		v1 = lookup(v1.asString())
 	}
-
 	if v2.valueType == Ref {
-		realValue2, ok = environment[v2.asString()]
-		if !ok {
-			panic(fmt.Errorf("no entry with name %s was found in a global object map", v2.asString()))
-		}
-	} else {
-		realValue2 = v2
+		v2 = lookup(v2.asString())
 	}
 
-	switch realValue1.value.(type) {
+	switch v1.value.(type) {
 	case float64:
 		return Value{
-			value:     realValue1.asFloat() - realValue2.asFloat(),
-			valueType: Literal,
+			value:     v1.asFloat() - v2.asFloat(),
+			valueType: Float,
 		}
 	default:
 		return Value{
@@ -91,34 +108,18 @@ func sub(v1, v2 Value) Value {
 }
 
 func mul(v1, v2 Value) Value {
-	var (
-		realValue1, realValue2 Value
-		ok                     bool
-	)
-
 	if v1.valueType == Ref {
-		realValue1, ok = environment[v1.asString()]
-		if !ok {
-			panic(fmt.Errorf("no entry with name %s was found in a global object map", v1.asString()))
-		}
-	} else {
-		realValue1 = v1
+		v1 = lookup(v1.asString())
 	}
-
 	if v2.valueType == Ref {
-		realValue2, ok = environment[v2.asString()]
-		if !ok {
-			panic(fmt.Errorf("no entry with name %s was found in a global object map", v2.asString()))
-		}
-	} else {
-		realValue2 = v2
+		v2 = lookup(v2.asString())
 	}
 
-	switch realValue1.value.(type) {
+	switch v1.value.(type) {
 	case float64:
 		return Value{
-			value:     realValue1.asFloat() * realValue2.asFloat(),
-			valueType: Literal,
+			value:     v1.asFloat() * v2.asFloat(),
+			valueType: Float,
 		}
 	default:
 		return Value{
@@ -129,31 +130,60 @@ func mul(v1, v2 Value) Value {
 }
 
 func execute(program Program) {
-	for _, node := range program.nodeList {
-		switch node.(type) {
-		case *VarDecl, *ValDecl:
-			visitDecl(node)
-		}
+	for _, stmt := range program.stmtList {
+		visitStmt(stmt)
 	}
 }
 
-func visitDecl(node Node) {
+func visitStmt(node Stmt) Value {
 	switch node.(type) {
-	case *VarDecl:
-		varDecl := node.(*VarDecl)
+	default:
+		panic(fmt.Errorf("unknown node type %v", reflect.TypeOf(node)))
+	case *VarDeclStmt:
+		varDecl := node.(*VarDeclStmt)
 		value := visitExpr(varDecl.rhs)
 		value.immutable = false
-		environment[varDecl.name.value] = value
-	case *ValDecl:
-		valDecl := node.(*ValDecl)
+		store(varDecl.name.value, value)
+		return Value{}
+	case *ValDeclStmt:
+		valDecl := node.(*ValDeclStmt)
 		value := visitExpr(valDecl.rhs)
 		value.immutable = true
-		environment[valDecl.name.value] = value
+		store(valDecl.name.value, value)
+		return Value{}
+	case *IfStmt:
+		var ifStmt = node.(*IfStmt)
+		if isCondTrue(ifStmt.cond) {
+			visitStmt(ifStmt.body)
+		} else {
+			visitStmt(ifStmt.elseBody)
+		}
+		return Value{}
+	case *WhileStmt:
+		var whileStmt = node.(*WhileStmt)
+		for isCondTrue(whileStmt.cond) {
+			visitStmt(whileStmt.body)
+		}
+		return Value{}
+	case *Assignment:
+		assignment := node.(*Assignment)
+		lhsValue := visitExpr(assignment.lhs)
+		if lhsValue.valueType != Ref {
+			panic("lhs value in assignment should have a value type Ref")
+		}
+		rhsValue := visitExpr(assignment.rhs)
+		if err := checkAssignmentValidity(lhsValue.asString()); err != nil {
+			panic(err)
+		}
+		store(lhsValue.asString(), rhsValue)
+		return Value{}
 	}
 }
 
 func visitExpr(expr Expr) Value {
 	switch expr.(type) {
+	default:
+		return Value{value: nil}
 	case *Name:
 		name := expr.(*Name)
 		v := Value{
@@ -163,38 +193,21 @@ func visitExpr(expr Expr) Value {
 		return v
 	case *BasicLit:
 		basicLit := expr.(*BasicLit)
-		v := Value{
-			valueType: Literal,
-		}
+		v := Value{}
 		switch basicLit.kind {
 		case FloatLit:
-			v.value, _ = strconv.ParseFloat(basicLit.value, 32)
+			v.value, _ = strconv.ParseFloat(basicLit.value, 64)
+			v.valueType = Float
 		case StringLit:
 			v.value = basicLit.value
+			v.valueType = String
 		}
 		return v
-	case *IfStmt:
-		// TODO(threadedstream):
-		return Value{}
-	case *WhileStmt:
-		//TODO(threadedstream):
-		return Value{}
-	case *Assignment:
-		assignment := expr.(*Assignment)
-		lhsValue := visitExpr(assignment.rhs)
-		if lhsValue.valueType != Ref {
-			panic("lhs value in assignment should have a value type Ref")
-		}
-		rhsValue := visitExpr(assignment.lhs)
-		if err := checkAssignmentValidity(lhsValue.value.(string)); err != nil {
-			panic(err)
-		}
-		environment[lhsValue.value.(string)] = rhsValue
-		// for now, return a dummy value object
-		return Value{}
 	case *Operation:
 		operation := expr.(*Operation)
 		switch operation.op {
+		default:
+			panic("unknown operation")
 		case PlusOp:
 			lhsValue := visitExpr(operation.lhs)
 			rhsValue := visitExpr(operation.rhs)
@@ -213,10 +226,6 @@ func visitExpr(expr Expr) Value {
 			checkOpValues(MulOp, lhsValue, rhsValue)
 			value := mul(lhsValue, rhsValue)
 			return value
-		default:
-			panic("unknown operation")
 		}
-	default:
-		return Value{value: nil}
 	}
 }

@@ -5,9 +5,15 @@ import "text/scanner"
 type Operator int
 
 const (
-	PlusOp Operator = iota
-	MinusOp
-	MulOp
+	PlusOp             Operator = iota // +
+	MinusOp                            // -
+	MulOp                              // *
+	GreaterThan                        // >
+	GreaterThanOrEqual                 // >=
+	LessThan                           // <
+	LessThanOrEqual                    // <=
+	Equal                              // ==
+	NotEqual                           // !=
 )
 
 type SourceInfo struct {
@@ -28,34 +34,14 @@ func (n *node) Pos() SourceInfo {
 }
 
 type Program struct {
-	nodeList []Node
+	stmtList []Stmt
 	EOF      scanner.Position
 	node
 }
 
 type (
-	VarDecl struct {
-		name Name
-		rhs  Expr
-		node
-	}
-
-	ValDecl struct {
-		name Name
-		rhs  Expr
-		node
-	}
-)
-
-type (
 	Expr interface {
 		Node
-	}
-
-	Assignment struct {
-		lhs Expr
-		rhs Expr
-		expr
 	}
 
 	Operation struct {
@@ -82,25 +68,53 @@ type expr struct {
 }
 
 type (
-	Statement interface {
+	Stmt interface {
 		Node
+	}
+
+	BlockStmt struct {
+		stmts []Stmt
+		stmt
 	}
 
 	WhileStmt struct {
 		cond Operation
-		body Expr
-		statement
+		body *BlockStmt
+		stmt
 	}
 
 	IfStmt struct {
 		cond     Operation
-		body     Expr
-		elseBody Expr
-		statement
+		body     *BlockStmt
+		elseBody Stmt
+		stmt
+	}
+
+	Assignment struct {
+		lhs Expr
+		rhs Expr
+		stmt
+	}
+
+	VarDeclStmt struct {
+		name Name
+		rhs  Expr
+		stmt
+	}
+
+	ValDeclStmt struct {
+		name Name
+		rhs  Expr
+		stmt
+	}
+
+	DefDeclStmt struct {
+		name *Name
+		body *BlockStmt
 	}
 )
 
-type statement struct {
+type stmt struct {
 	node
 }
 

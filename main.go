@@ -116,91 +116,14 @@ func run(code string) int {
 }
 
 func main() {
-	//path := "sources/main.scala"
-	//node := parse(path)
-	//fmt.Printf("%x", node)
-
-	// var x = 56
-	// var y = (x + 43) + 90
-	// if y == 99
-	// 		x = 1
-	// else
-	//	 	x = 20
-	// while x > 0
-	// 		x = x - 1
-	//varXDecl := VarDeclStmt{
-	//	name: Name{value: "x"},
-	//	rhs: &BasicLit{
-	//		value: "56",
-	//		kind:  FloatLit,
-	//	},
-	//}
-	//
-	//varYDecl := VarDeclStmt{
-	//	name: Name{value: "y"},
-	//	rhs: &Operation{
-	//		op: PlusOp,
-	//		lhs: &Operation{
-	//			op:  PlusOp,
-	//			lhs: &Name{value: "x"},
-	//			rhs: &BasicLit{
-	//				value: "43",
-	//				kind:  FloatLit,
-	//			},
-	//		},
-	//		rhs: &BasicLit{
-	//			value: "90",
-	//			kind:  FloatLit,
-	//		},
-	//	},
-	//}
-
-	//defDecl := DefDeclStmt{
-	//	name: &Name{value: "fib"},
-	//	body: &BlockStmt{
-	//		stmts: []Stmt{},
-	//	},
-	//}
-
-	//whileStmtAssignment := &Assignment{
-	//	lhs: &Name{value: "x"},
-	//	rhs: &Operation{
-	//		op:  MinusOp,
-	//		lhs: &Name{value: "x"},
-	//		rhs: &BasicLit{
-	//			value: "1",
-	//			kind:  FloatLit,
-	//		},
-	//	},
-	//},
-	//
-	//
-	//whileStmt := WhileStmt{
-	//	cond: Operation{
-	//		op:  GreaterThan,
-	//		lhs: &Name{value: "x"},
-	//		rhs: &BasicLit{
-	//			value: "0",
-	//			kind:  FloatLit,
-	//		},
-	//	},
-	//	body: &BlockStmt{
-	//		[]Stmt{
-	//			whileStmtAssignment,
-	//		},
-	//	},
-	//}
-
-	//program := Program{
-	//stmtList: []Stmt{
-	//	&varXDecl, &varYDecl,
-	//	&ifStmt, &whileStmt,
-	//	},
-	//}
-
-	//execute(program)
-	//
-	//for k, v := range environment {
-	//	fmt.Printf("%s - %v\n", k, v)
-	//}
+	path := "sources/test01.miniscala"
+	handle, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	scanner := newCharScanner(handle)
+	tokens := scanner.Tokenize()
+	for _, token := range tokens {
+		fmt.Printf("%v", token)
+	}
 }

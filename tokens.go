@@ -4,12 +4,10 @@ import "text/scanner"
 
 type Token interface {
 	Pos() scanner.Position
-	Text() string
 }
 
 type tok struct {
-	text string
-	pos  scanner.Position
+	pos scanner.Position
 }
 
 type (
@@ -21,11 +19,59 @@ type (
 		tok
 	}
 
+	TokenDef struct {
+		tok
+	}
+
 	TokenSemicolon struct {
 		tok
 	}
 
 	TokenAssign struct {
+		tok
+	}
+
+	TokenEqual struct {
+		tok
+	}
+
+	TokenNotEqual struct {
+		tok
+	}
+
+	TokenGreaterThan struct {
+		tok
+	}
+
+	TokenGreaterThanOrEqual struct {
+		tok
+	}
+
+	TokenLessThan struct {
+		tok
+	}
+
+	TokenLessThanOrEqual struct {
+		tok
+	}
+
+	TokenOpenBrace struct {
+		tok
+	}
+
+	TokenCloseBrace struct {
+		tok
+	}
+
+	TokenOpenParen struct {
+		tok
+	}
+
+	TokenCloseParen struct {
+		tok
+	}
+
+	TokenEOF struct {
 		tok
 	}
 
@@ -42,12 +88,12 @@ type (
 	}
 
 	TokenIdent struct {
-		name string
+		value string
 		tok
 	}
 
 	TokenNumber struct {
-		value float64
+		value string
 		tok
 	}
 
@@ -61,6 +107,10 @@ type (
 	}
 
 	TokenIf struct {
+		tok
+	}
+
+	TokenUnknown struct {
 		tok
 	}
 )
@@ -82,6 +132,55 @@ func (t *tok) Pos() scanner.Position {
 	return t.pos
 }
 
-func (t *tok) Text() string {
-	return t.text
+func tokToString(token Token) string {
+	switch token.(type) {
+	case *TokenVar:
+		return "TokenVar"
+	case *TokenVal:
+		return "TokenVal"
+	case *TokenDef:
+		return "TokenDef"
+	case *TokenSemicolon:
+		return "TokenSemicolon"
+	case *TokenAssign:
+		return "TokenAssign"
+	case *TokenEqual:
+		return "TokenEqual"
+	case *TokenNotEqual:
+		return "TokenNotEqual"
+	case *TokenGreaterThan:
+		return "TokenGreaterThan"
+	case *TokenGreaterThanOrEqual:
+		return "TokenGreaterThanOrEqual"
+	case *TokenLessThan:
+		return "TokenLessThan"
+	case *TokenLessThanOrEqual:
+		return "TokenLessThanOrEqual"
+	case *TokenPlus:
+		return "TokenPlus"
+	case *TokenMinus:
+		return "TokenMinus"
+	case *TokenMul:
+		return "TokenMul"
+	case *TokenString:
+		return "TokenString"
+	case *TokenIf:
+		return "TokenIf"
+	case *TokenWhile:
+		return "TokenWhile"
+	case *TokenIdent:
+		return "TokenIdent"
+	case *TokenOpenBrace:
+		return "TokenOpenBrace"
+	case *TokenCloseBrace:
+		return "TokenCloseBrace"
+	case *TokenOpenParen:
+		return "TokenOpenParen"
+	case *TokenCloseParen:
+		return "TokenCloseParen"
+	case *TokenEOF:
+		return "TokenEOF"
+	default:
+		return "TokenUnknown"
+	}
 }

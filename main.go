@@ -115,15 +115,23 @@ func run(code string) int {
 	return res
 }
 
+type Boy struct {
+}
+
+type Girl struct {
+}
+
 func main() {
-	path := "sources/test01.miniscala"
-	handle, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	scanner := newCharScanner(handle)
-	tokens := scanner.Tokenize()
-	for _, token := range tokens {
-		fmt.Printf("%v", token)
+	//path := "sources/101.miniscala"
+
+	//program := syntax.Parse(path)
+	//
+	//interpreter.Execute(program)
+	//interpreter.DumpEnvState()
+
+	i := 10
+	for i > 0 {
+		println(i / (i - 2))
+		i--
 	}
 }

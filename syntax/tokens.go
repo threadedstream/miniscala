@@ -1,4 +1,4 @@
-package main
+package syntax
 
 import "text/scanner"
 
@@ -87,6 +87,10 @@ type (
 		tok
 	}
 
+	TokenDiv struct {
+		tok
+	}
+
 	TokenIdent struct {
 		value string
 		tok
@@ -110,23 +114,14 @@ type (
 		tok
 	}
 
+	TokenElse struct {
+		tok
+	}
+
 	TokenUnknown struct {
 		tok
 	}
 )
-
-//const (
-//	TokenVar int = iota
-//	TokenVal
-//	TokenSemicolon
-//	TokenAssign
-//	TokenPlus
-//	TokenMinus
-//	TokenMul
-//	TokenIdent
-//  TokenNumber
-//  TokenString
-//)
 
 func (t *tok) Pos() scanner.Position {
 	return t.pos
@@ -162,6 +157,8 @@ func tokToString(token Token) string {
 		return "TokenMinus"
 	case *TokenMul:
 		return "TokenMul"
+	case *TokenDiv:
+		return "TokenDiv"
 	case *TokenString:
 		return "TokenString"
 	case *TokenIf:

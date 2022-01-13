@@ -1,0 +1,16 @@
+
+def doSomething(): Unit {
+    var x = 20
+    var y = x + 60 * 2
+
+    if (x == 20) {
+        y = 100
+    } else {
+        y = 200
+    }
+
+    while (y > 0) {
+        y = y - 1
+    }
+}
+

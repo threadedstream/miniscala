@@ -1,4 +1,4 @@
-package main
+package interpreter
 
 //var (
 //	regs   = []string{"%rax", "%rcx", "%rdx"}

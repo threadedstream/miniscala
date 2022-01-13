@@ -1,4 +1,4 @@
-package main
+package syntax
 
 import (
 	"io"
@@ -46,6 +46,9 @@ func (cs *CharScanner) Tokenize() []Token {
 		tokens = append(tokens, token)
 	}
 
+	// append EOF token
+	tokens = append(tokens, &TokenEOF{})
+
 	return tokens
 }
 
@@ -57,6 +60,7 @@ func (cs *CharScanner) tokenize() Token {
 	default:
 		peekChar := cs.s.Peek()
 		if isAlphaNum(peekChar) {
+			pos := cs.s.Pos()
 			var tokenValue []rune
 			for isAlphaNum(cs.s.Peek()) {
 				tokenValue = append(tokenValue, cs.s.Peek())
@@ -67,67 +71,156 @@ func (cs *CharScanner) tokenize() Token {
 			} else {
 				return &TokenIdent{
 					value: string(tokenValue),
+					tok: tok{
+						pos: pos,
+					},
 				}
 			}
 		}
 		return &TokenUnknown{}
 	case '=':
+		pos := cs.s.Pos()
 		cs.s.Next()
 		if cs.s.Peek() == '=' {
 			cs.s.Next()
-			return &TokenEqual{}
+			return &TokenEqual{
+				tok: tok{
+					pos: pos,
+				},
+			}
 		} else {
-			return &TokenAssign{}
+			return &TokenAssign{
+				tok: tok{
+					pos: pos,
+				},
+			}
 		}
 	case '{':
+		pos := cs.s.Pos()
 		cs.s.Next()
-		return &TokenOpenBrace{}
+		return &TokenOpenBrace{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '}':
+		pos := cs.s.Pos()
 		cs.s.Next()
-		return &TokenCloseBrace{}
+		return &TokenCloseBrace{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '(':
+		pos := cs.s.Pos()
 		cs.s.Next()
-		return &TokenOpenParen{}
+		return &TokenOpenParen{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case ')':
+		pos := cs.s.Pos()
 		cs.s.Next()
-		return &TokenCloseParen{}
+		return &TokenCloseParen{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '+':
+		pos := cs.s.Pos()
 		cs.s.Next()
-		return &TokenPlus{}
+		return &TokenPlus{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '-':
+		pos := cs.s.Pos()
 		cs.s.Next()
-		return &TokenMinus{}
+		return &TokenMinus{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '*':
+		pos := cs.s.Pos()
 		cs.s.Next()
-		return &TokenMul{}
+		return &TokenMul{
+			tok: tok{
+				pos: pos,
+			},
+		}
+	case '/':
+		pos := cs.s.Pos()
+		cs.s.Next()
+		return &TokenDiv{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '>':
+		pos := cs.s.Pos()
 		cs.s.Next()
 		if cs.s.Peek() == '=' {
 			cs.s.Next()
-			return &TokenGreaterThanOrEqual{}
+			return &TokenGreaterThanOrEqual{
+				tok: tok{
+					pos: pos,
+				},
+			}
 		} else {
-			return &TokenGreaterThan{}
+			return &TokenGreaterThan{
+				tok: tok{
+					pos: pos,
+				},
+			}
 		}
 	case '<':
+		pos := cs.s.Pos()
 		cs.s.Next()
 		if cs.s.Peek() == '=' {
 			cs.s.Next()
-			return &TokenLessThanOrEqual{}
+			return &TokenLessThanOrEqual{
+				tok: tok{
+					pos: pos,
+				},
+			}
 		} else {
-			return &TokenLessThan{}
+			return &TokenLessThan{
+				tok: tok{
+					pos: pos,
+				},
+			}
 		}
 	case '!':
+		pos := cs.s.Pos()
 		cs.s.Next()
 		if cs.s.Peek() == '=' {
-			return &TokenNotEqual{}
+			return &TokenNotEqual{
+				tok: tok{
+					pos: pos,
+				},
+			}
 		}
 	case '"':
+		pos := cs.s.Pos()
 		cs.s.Next()
-		return cs.tokenizeString()
-	case '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		return cs.tokenizeNumber()
+		tokenString := cs.tokenizeString()
+		tokenString.pos = pos
+		return tokenString
+	case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0':
+		pos := cs.s.Pos()
+		tokenNumber := cs.tokenizeNumber()
+		tokenNumber.pos = pos
+		return tokenNumber
 	case scanner.EOF:
-		return &TokenEOF{}
+		pos := cs.s.Pos()
+		return &TokenEOF{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	}
 
 	return &TokenUnknown{}
@@ -177,6 +270,8 @@ func (cs *CharScanner) tokenizeKeyword(kwd string) Token {
 		return &TokenVar{}
 	case "if":
 		return &TokenIf{}
+	case "else":
+		return &TokenElse{}
 	case "while":
 		return &TokenWhile{}
 	case "def":
@@ -190,22 +285,13 @@ func isKeyword(kwd string) bool {
 	switch kwd {
 	default:
 		return false
-	case "val", "var", "if", "while", "def":
+	case "val", "var", "if", "else", "while", "def":
 		return true
 	}
 }
 
 func isDelim(c rune) bool {
 	return c == '{' || c == '}' || c == '(' || c == ')' || c == ';' || c == '='
-}
-
-func isOperator(op rune) bool {
-	switch op {
-	case '+', '-', '*', '/', '%':
-		return true
-	default:
-		return false
-	}
 }
 
 func isCondOp(op string) bool {

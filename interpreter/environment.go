@@ -1,6 +1,8 @@
-package main
+package interpreter
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var (
 	environment = make(map[string]Value)
@@ -16,4 +18,10 @@ func lookup(name string) Value {
 		panic(fmt.Errorf("no entry with name %s was found in an environment", name))
 	}
 	return val
+}
+
+func state() {
+	for k, v := range environment {
+		fmt.Printf("%s: %v\n", k, v)
+	}
 }

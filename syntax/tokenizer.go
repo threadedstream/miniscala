@@ -203,6 +203,14 @@ func (cs *CharScanner) tokenize() Token {
 				},
 			}
 		}
+	case ':':
+		pos := cs.s.Pos()
+		cs.s.Next()
+		return &TokenColon{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '"':
 		pos := cs.s.Pos()
 		cs.s.Next()

@@ -39,6 +39,10 @@ type (
 		tok
 	}
 
+	TokenColon struct {
+		tok
+	}
+
 	TokenGreaterThan struct {
 		tok
 	}
@@ -68,10 +72,6 @@ type (
 	}
 
 	TokenCloseParen struct {
-		tok
-	}
-
-	TokenEOF struct {
 		tok
 	}
 
@@ -115,6 +115,10 @@ type (
 	}
 
 	TokenElse struct {
+		tok
+	}
+
+	TokenEOF struct {
 		tok
 	}
 

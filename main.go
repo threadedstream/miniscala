@@ -1,9 +1,12 @@
 package main
 
+import "C"
 import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/ThreadedStream/miniscala/interpreter"
+	"github.com/ThreadedStream/miniscala/syntax"
 	"io"
 	"log"
 	"os"
@@ -115,23 +118,12 @@ func run(code string) int {
 	return res
 }
 
-type Boy struct {
-}
-
-type Girl struct {
-}
-
 func main() {
-	//path := "sources/101.miniscala"
+	path := "sources/101.miniscala"
 
-	//program := syntax.Parse(path)
-	//
-	//interpreter.Execute(program)
-	//interpreter.DumpEnvState()
+	program := syntax.Parse(path)
 
-	i := 10
-	for i > 0 {
-		println(i / (i - 2))
-		i--
-	}
+	interpreter.Execute(program)
+	interpreter.DumpEnvState()
+
 }

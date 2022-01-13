@@ -56,7 +56,8 @@ type (
 		expr
 	}
 
-	// Name Type
+	// var Name: Type
+	// val Name: Type
 	Field struct {
 		Name *Name
 		Type Expr

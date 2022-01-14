@@ -1,4 +1,5 @@
-def doSomething(): Unit {
+
+def doSomething(x: Int, y: Int): Unit {
     var x = 20
     var y = x + 60 * 2
 
@@ -13,3 +14,4 @@ def doSomething(): Unit {
     }
 }
 
+doSomething(40, 60)

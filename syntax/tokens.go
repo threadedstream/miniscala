@@ -27,7 +27,15 @@ type (
 		tok
 	}
 
+	TokenComma struct {
+		tok
+	}
+
 	TokenAssign struct {
+		tok
+	}
+
+	TokenReturn struct {
 		tok
 	}
 

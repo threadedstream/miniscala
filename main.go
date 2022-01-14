@@ -123,7 +123,91 @@ func main() {
 
 	program := syntax.Parse(path)
 
+	//program := &syntax.Program{
+	//	StmtList: []syntax.Stmt{
+	//		&syntax.DefDeclStmt{
+	//			Name: &syntax.Name{
+	//				Value: "add",
+	//			},
+	//			ParamList: []*syntax.Field{
+	//				{
+	//					Name: &syntax.Name{
+	//						Value: "x",
+	//					},
+	//					Type: &syntax.Name{
+	//						Value: "Int",
+	//					},
+	//				},
+	//				{
+	//					Name: &syntax.Name{
+	//						Value: "y",
+	//					},
+	//					Type: &syntax.Name{
+	//						Value: "Int",
+	//					},
+	//				},
+	//			},
+	//			ReturnType: &syntax.Name{
+	//				Value: "Int",
+	//			},
+	//			Body: &syntax.BlockStmt{
+	//				Stmts: []syntax.Stmt{
+	//					&syntax.VarDeclStmt{
+	//						Name: syntax.Name{
+	//							Value: "z",
+	//						},
+	//						Rhs: &syntax.BasicLit{
+	//							Value: "0",
+	//							Kind:  syntax.FloatLit,
+	//						},
+	//					},
+	//					&syntax.Assignment{
+	//						Lhs: &syntax.Name{
+	//							Value: "z",
+	//						},
+	//						Rhs: &syntax.Operation{
+	//							Op: syntax.Plus,
+	//							Lhs: &syntax.Name{
+	//								Value: "x",
+	//							},
+	//							Rhs: &syntax.Name{
+	//								Value: "y",
+	//							},
+	//						},
+	//					},
+	//					&syntax.Return{
+	//						Value: &syntax.Name{
+	//							Value: "z",
+	//						},
+	//					},
+	//				},
+	//			},
+	//		},
+	//		&syntax.Call{
+	//			CalleeName: &syntax.Name{
+	//				Value: "print",
+	//			},
+	//			ArgList: []syntax.Expr{
+	//				&syntax.Call{
+	//					CalleeName: &syntax.Name{
+	//						Value: "add",
+	//					},
+	//					ArgList: []syntax.Expr{
+	//						&syntax.BasicLit{
+	//							Value: "10",
+	//							Kind:  syntax.FloatLit,
+	//						},
+	//						&syntax.BasicLit{
+	//							Value: "30",
+	//							Kind:  syntax.FloatLit,
+	//						},
+	//					},
+	//				},
+	//			},
+	//		},
+	//	},
+	//}
+
 	interpreter.Execute(program)
 	interpreter.DumpEnvState()
-
 }

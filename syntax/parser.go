@@ -19,6 +19,10 @@ type Parser struct {
 	currIdx     int
 }
 
+func (p *Parser) isOfType(lhs Token, rhs Token) bool {
+	return reflect.TypeOf(lhs) == reflect.TypeOf(rhs)
+}
+
 func (p *Parser) peek() Token {
 	if p.currIdx+1 < len(p.tokenStream) {
 		return p.tokenStream[p.currIdx+1]
@@ -80,12 +84,14 @@ func (p *Parser) stmt() Stmt {
 		return p.whileStmt()
 	case *TokenOpenBrace:
 		return p.blockStmt()
+	case *TokenDef:
+		return p.defDeclStmt()
 	default:
 		if (reflect.TypeOf(p.curr()) == reflect.TypeOf(&TokenIdent{})) &&
 			(reflect.TypeOf(p.peek()) == reflect.TypeOf(&TokenAssign{})) {
 			return p.assignment()
 		} else {
-			panic(fmt.Errorf("expected var, val, if, or ident, but got %s", tokToString(p.curr())))
+			return p.expr()
 		}
 	}
 }
@@ -110,6 +116,10 @@ func (p *Parser) atom() Node {
 		p.consume(&TokenCloseBrace{})
 		return expr
 	case *TokenIdent:
+		if p.isOfType(p.peek(), &TokenOpenParen{}) {
+			// call to function
+			return p.call()
+		}
 		ident := p.curr().(*TokenIdent)
 		p.next()
 		return &Name{
@@ -160,6 +170,73 @@ func (p *Parser) varDeclStmt() *VarDeclStmt {
 	varDeclStmt.Rhs = p.expr()
 
 	return varDeclStmt
+}
+
+func (p *Parser) defDeclStmt() *DefDeclStmt {
+	var (
+		defDeclStmt          = &DefDeclStmt{}
+		paramName, paramType Expr
+	)
+	p.consume(&TokenDef{})
+	if !p.match(&TokenIdent{}) {
+		panic(fmt.Errorf("expected name of the function, but got %s", tokToString(p.curr())))
+	}
+	tokenIdent := p.curr().(*TokenIdent)
+	defDeclStmt.Name = &Name{Value: tokenIdent.value}
+	p.next()
+	p.consume(&TokenOpenParen{})
+	if p.match(&TokenCloseParen{}) {
+		p.consume(&TokenCloseParen{})
+		goto parseReturnType
+	}
+
+	// TODO(threadedstream): should really be paramName = expr()
+	paramName = p.expr()
+	p.consume(&TokenColon{})
+	//if !p.match(&TokenIdent{}) {
+	//	panic(fmt.Errorf("expected a type, but got %s", p.curr()))
+	//}
+	// TODO(threadedstream): the same as with paramName
+	paramType = p.expr()
+
+	defDeclStmt.ParamList = append(defDeclStmt.ParamList, &Field{
+		Name: paramName.(*Name),
+		Type: paramType,
+	})
+
+	for p.isOfType(p.curr(), &TokenComma{}) &&
+		!p.isOfType(p.peek(), &TokenCloseParen{}) &&
+		!p.isOfType(p.peek(), &TokenEOF{}) {
+
+		p.consume(&TokenComma{})
+		paramName := p.expr()
+		p.consume(&TokenColon{})
+		//if !p.match(&TokenIdent{}) {
+		//	panic(fmt.Errorf("expected a type, but got %s", p.curr()))
+		//}
+		paramType := p.expr()
+
+		defDeclStmt.ParamList = append(defDeclStmt.ParamList, &Field{
+			Name: paramName.(*Name),
+			Type: paramType,
+		})
+	}
+
+	p.consume(&TokenCloseParen{})
+
+parseReturnType:
+	p.consume(&TokenColon{})
+	if !p.match(&TokenIdent{}) {
+		panic(fmt.Errorf("expected a return type, but got %s", p.curr()))
+	}
+	defDeclStmt.ReturnType = p.expr()
+	defDeclStmt.Body = p.blockStmt()
+
+	return defDeclStmt
+}
+
+func (p *Parser) call() *Call {
+	return &Call{}
 }
 
 func (p *Parser) whileStmt() *WhileStmt {

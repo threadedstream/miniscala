@@ -62,6 +62,17 @@ type (
 		Type Expr
 	}
 
+	Call struct {
+		CalleeName *Name
+		ArgList    []Expr
+		expr
+	}
+
+	Return struct {
+		Value Expr
+		expr
+	}
+
 	Name struct {
 		Value string
 		expr
@@ -121,10 +132,10 @@ type (
 
 	// def Name ( ParamList ) :Type { Body }
 	DefDeclStmt struct {
-		Name      *Name
-		ParamList []*Field
-		Type      Expr
-		Body      *BlockStmt
+		Name       *Name
+		ParamList  []*Field
+		ReturnType Expr
+		Body       *BlockStmt
 		stmt
 	}
 )

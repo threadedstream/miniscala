@@ -211,6 +211,14 @@ func (cs *CharScanner) tokenize() Token {
 				pos: pos,
 			},
 		}
+	case ',':
+		pos := cs.s.Pos()
+		cs.s.Next()
+		return &TokenComma{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '"':
 		pos := cs.s.Pos()
 		cs.s.Next()
@@ -293,7 +301,7 @@ func isKeyword(kwd string) bool {
 	switch kwd {
 	default:
 		return false
-	case "val", "var", "if", "else", "while", "def":
+	case "val", "var", "if", "else", "while", "def", "return":
 		return true
 	}
 }

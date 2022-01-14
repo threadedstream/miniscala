@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"github.com/ThreadedStream/miniscala/assert"
+	"github.com/ThreadedStream/miniscala/syntax"
 )
 
 type ValueType int
@@ -9,6 +10,7 @@ type ValueType int
 const (
 	Float ValueType = iota
 	String
+	Unit // void
 	Bool // add functionality for bool later on
 	Function
 	Ref
@@ -16,10 +18,30 @@ const (
 	Undefined
 )
 
-type Value struct {
-	Value     interface{}
-	ValueType ValueType
-	Immutable bool
+type (
+	Value struct {
+		Value     interface{}
+		ValueType ValueType
+		Immutable bool
+	}
+
+	// DefValue or Callable value
+	DefValue struct {
+		DefDeclStmt *syntax.DefDeclStmt
+		DefLocalEnv map[string]Value
+		ReturnType  ValueType
+	}
+)
+
+func miniscalaTypeToValueType(typ string) ValueType {
+	switch typ {
+	default:
+		return Undefined
+	case "Int", "Float":
+		return Float
+	case "String":
+		return String
+	}
 }
 
 func (v Value) valueTypeToStr() string {

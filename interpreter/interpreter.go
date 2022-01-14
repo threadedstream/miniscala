@@ -149,6 +149,8 @@ func visitStmt(stmt syntax.Stmt) Value {
 		return visitWhileStmt(stmt)
 	case *syntax.Assignment:
 		return visitAssignment(stmt)
+	case *syntax.DefDeclStmt:
+		return visitDefDeclStmt(stmt)
 	}
 }
 
@@ -276,4 +278,23 @@ func visitAssignment(stmt syntax.Stmt) Value {
 	}
 	store(lhsValue.asString(), rhsValue)
 	return Value{}
+}
+
+func visitDefDeclStmt(stmt syntax.Stmt) Value {
+	var (
+		defDeclStmt = stmt.(*syntax.DefDeclStmt)
+		defLocalEnv = make(map[string]Value)
+		defValue    = Value{
+			ValueType: Function,
+		}
+	)
+	for _, param := range defDeclStmt.ParamList {
+		resolvedType := visitExpr(param.Type)
+		defLocalEnv[param.Name.Value] = Value{
+			ValueType: miniscalaTypeToValueType(resolvedType.asString()),
+		}
+	}
+
+	defValue.Value = defLocalEnv
+
 }

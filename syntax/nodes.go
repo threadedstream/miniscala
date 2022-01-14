@@ -56,8 +56,7 @@ type (
 		expr
 	}
 
-	// var Name: Type
-	// val Name: Type
+	// Name: Type
 	Field struct {
 		Name *Name
 		Type Expr
@@ -126,6 +125,7 @@ type (
 		ParamList []*Field
 		Type      Expr
 		Body      *BlockStmt
+		stmt
 	}
 )
 

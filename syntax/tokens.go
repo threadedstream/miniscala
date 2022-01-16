@@ -163,6 +163,8 @@ func tokToString(token Token) string {
 		return "TokenLessThan"
 	case *TokenLessThanOrEqual:
 		return "TokenLessThanOrEqual"
+	case *TokenColon:
+		return "TokenColon"
 	case *TokenPlus:
 		return "TokenPlus"
 	case *TokenMinus:
@@ -187,6 +189,8 @@ func tokToString(token Token) string {
 		return "TokenOpenParen"
 	case *TokenCloseParen:
 		return "TokenCloseParen"
+	case *TokenReturn:
+		return "TokenReturn"
 	case *TokenEOF:
 		return "TokenEOF"
 	default:

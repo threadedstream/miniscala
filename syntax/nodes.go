@@ -68,11 +68,6 @@ type (
 		expr
 	}
 
-	Return struct {
-		Value Expr
-		expr
-	}
-
 	Name struct {
 		Value string
 		expr
@@ -109,6 +104,10 @@ type (
 		stmt
 	}
 
+	ReturnStmt struct {
+		Value Expr
+		stmt
+	}
 	// Lhs = Rhs
 	Assignment struct {
 		Lhs Expr

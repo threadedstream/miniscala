@@ -292,6 +292,8 @@ func (cs *CharScanner) tokenizeKeyword(kwd string) Token {
 		return &TokenWhile{}
 	case "def":
 		return &TokenDef{}
+	case "return":
+		return &TokenReturn{}
 	default:
 		return &TokenUnknown{}
 	}

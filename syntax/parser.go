@@ -86,6 +86,8 @@ func (p *Parser) stmt() Stmt {
 		return p.blockStmt()
 	case *TokenDef:
 		return p.defDeclStmt()
+	case *TokenReturn:
+		return p.returnStmt()
 	default:
 		if (reflect.TypeOf(p.curr()) == reflect.TypeOf(&TokenIdent{})) &&
 			(reflect.TypeOf(p.peek()) == reflect.TypeOf(&TokenAssign{})) {
@@ -225,9 +227,12 @@ func (p *Parser) defDeclStmt() *DefDeclStmt {
 	p.consume(&TokenCloseParen{})
 
 parseReturnType:
-	p.consume(&TokenColon{})
+	if !p.match(&TokenColon{}) {
+		panic(fmt.Errorf("expected a specification of return type, but got %s", tokToString(p.curr())))
+	}
+	p.next()
 	if !p.match(&TokenIdent{}) {
-		panic(fmt.Errorf("expected a return type, but got %s", p.curr()))
+		panic(fmt.Errorf("expected a type name, but got %s", tokToString(p.curr())))
 	}
 	defDeclStmt.ReturnType = p.expr()
 	defDeclStmt.Body = p.blockStmt()
@@ -236,7 +241,30 @@ parseReturnType:
 }
 
 func (p *Parser) call() *Call {
-	return &Call{}
+	var (
+		call  = &Call{}
+		ident = p.curr().(*TokenIdent)
+	)
+	call.CalleeName = &Name{Value: ident.value}
+	p.next()
+	p.consume(&TokenOpenParen{})
+	// parsing arguments
+	arg := p.expr()
+	call.ArgList = append(call.ArgList, arg)
+
+	for p.isOfType(p.curr(), &TokenComma{}) &&
+		!p.isOfType(p.peek(), &TokenCloseParen{}) &&
+		!p.isOfType(p.peek(), &TokenEOF{}) {
+
+		p.consume(&TokenComma{})
+
+		arg := p.expr()
+		call.ArgList = append(call.ArgList, arg)
+	}
+
+	p.consume(&TokenCloseParen{})
+
+	return call
 }
 
 func (p *Parser) whileStmt() *WhileStmt {
@@ -292,6 +320,14 @@ func (p *Parser) assignment() *Assignment {
 	assignment.Rhs = p.expr()
 
 	return assignment
+}
+
+func (p *Parser) returnStmt() *ReturnStmt {
+	returnStmt := new(ReturnStmt)
+	returnStmt.pos = p.curr().Pos()
+	p.consume(&TokenReturn{})
+	returnStmt.Value = p.expr()
+	return returnStmt
 }
 
 func (p *Parser) blockStmt() *BlockStmt {

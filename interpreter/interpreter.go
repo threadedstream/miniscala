@@ -8,6 +8,10 @@ import (
 	"strconv"
 )
 
+var (
+	returned bool
+)
+
 func checkOpValues(op syntax.Operator, v1, v2 Value, localEnv Environment) {
 
 	if v1.ValueType == Ref {
@@ -45,6 +49,14 @@ func checkOpValues(op syntax.Operator, v1, v2 Value, localEnv Environment) {
 			}
 		}
 	}
+}
+
+func checkDefReturnType(v Value, defReturnType, funcName string) {
+	if v.ValueType == miniscalaTypeToValueType(defReturnType) {
+		return
+	}
+
+	panic(fmt.Errorf("(in %s()) expected to return a value of type %s, but it returned %s", funcName, defReturnType, v.valueTypeToStr()))
 }
 
 func isReservedFuncCall(funcName string) bool {
@@ -136,13 +148,13 @@ func isCondTrue(cond syntax.Operation, localEnv Environment) bool {
 		if lhs.isString() && rhs.isString() {
 			return lhs.asString() < rhs.asString()
 		} else if lhs.isFloat() && rhs.isFloat() {
-			return lhs.asFloat() <= rhs.asFloat()
+			return lhs.asFloat() < rhs.asFloat()
 		} else {
 			panic("cast to string and float was unsuccessful")
 		}
 	case syntax.LessThanOrEqual:
 		if lhs.isString() && rhs.isString() {
-			return lhs.asString() < rhs.asString()
+			return lhs.asString() <= rhs.asString()
 		} else if lhs.isFloat() && rhs.isFloat() {
 			return lhs.asFloat() <= rhs.asFloat()
 		} else {
@@ -185,6 +197,8 @@ func visitStmt(stmt syntax.Stmt, localEnv Environment) Value {
 		return visitAssignment(stmt, localEnv)
 	case *syntax.DefDeclStmt:
 		return visitDefDeclStmt(stmt, localEnv)
+	case *syntax.ReturnStmt:
+		return visitReturnStmt(stmt, localEnv)
 	}
 }
 
@@ -200,8 +214,7 @@ func visitExpr(expr syntax.Expr, localEnv Environment) Value {
 		return visitOperation(expr, localEnv)
 	case *syntax.Call:
 		return visitCall(expr, localEnv)
-	case *syntax.Return:
-		return visitReturn(expr, localEnv)
+
 	}
 }
 
@@ -282,14 +295,16 @@ func visitCall(expr syntax.Expr, localEnv Environment) Value {
 
 	returnValue := visitStmt(defValue.DefDeclStmt.Body, defValue.DefLocalEnv)
 
+	checkDefReturnType(returnValue, defValue.DefDeclStmt.ReturnType.(*syntax.Name).Value, defValue.DefDeclStmt.Name.Value)
+
 	return returnValue
 }
 
-func visitReturn(expr syntax.Expr, localEnv Environment) Value {
-	returnStmt := expr.(*syntax.Return)
+func visitReturnStmt(stmt syntax.Stmt, localEnv Environment) Value {
+	returnStmt := stmt.(*syntax.ReturnStmt)
 	returnValue := visitExpr(returnStmt.Value, localEnv)
-	value, _ := lookup(returnValue.asString(), localEnv, true)
-	return value
+	returned = true
+	return returnValue
 }
 
 // statements
@@ -316,6 +331,10 @@ func visitBlockStmt(stmt syntax.Stmt, localEnv Environment) Value {
 	)
 
 	for _, stmt := range block.Stmts {
+		if returned {
+			returned = false
+			break
+		}
 		value = visitStmt(stmt, localEnv)
 	}
 
@@ -323,13 +342,16 @@ func visitBlockStmt(stmt syntax.Stmt, localEnv Environment) Value {
 }
 
 func visitIfStmt(stmt syntax.Stmt, localEnv Environment) Value {
-	var ifStmt = stmt.(*syntax.IfStmt)
+	var (
+		value  Value
+		ifStmt = stmt.(*syntax.IfStmt)
+	)
 	if isCondTrue(ifStmt.Cond, localEnv) {
-		visitStmt(ifStmt.Body, localEnv)
+		value = visitStmt(ifStmt.Body, localEnv)
 	} else {
-		visitStmt(ifStmt.ElseBody, localEnv)
+		value = visitStmt(ifStmt.ElseBody, localEnv)
 	}
-	return Value{}
+	return value
 }
 
 func visitWhileStmt(stmt syntax.Stmt, localEnv Environment) Value {
@@ -367,14 +389,6 @@ func visitDefDeclStmt(stmt syntax.Stmt, localEnv Environment) Value {
 			ValueType: Function,
 		}
 	)
-
-	// TODO(threadedstream): erase the stuff below
-	for _, param := range defDeclStmt.ParamList {
-		typ := visitExpr(param.Type, localEnv)
-		defLocalEnv[param.Name.Value] = Value{
-			ValueType: miniscalaTypeToValueType(typ.asString()),
-		}
-	}
 
 	defValue.DefLocalEnv = defLocalEnv
 

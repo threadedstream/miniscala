@@ -209,5 +209,5 @@ func main() {
 	//}
 
 	interpreter.Execute(program)
-	interpreter.DumpEnvState()
+	//	interpreter.DumpEnvState()
 }

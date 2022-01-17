@@ -43,7 +43,12 @@ func (cs *CharScanner) Tokenize() []Token {
 	var tokens []Token
 	for cs.s.Peek() != scanner.EOF {
 		token := cs.tokenize()
-		tokens = append(tokens, token)
+		switch token.(type) {
+		default:
+			tokens = append(tokens, token)
+		case *TokenComment:
+			break
+		}
 	}
 
 	// append EOF token
@@ -154,6 +159,10 @@ func (cs *CharScanner) tokenize() Token {
 	case '/':
 		pos := cs.s.Pos()
 		cs.s.Next()
+		if cs.s.Peek() == '/' {
+			cs.handleComment()
+			return &TokenComment{}
+		}
 		return &TokenDiv{
 			tok: tok{
 				pos: pos,
@@ -275,6 +284,12 @@ func (cs *CharScanner) tokenizeString() *TokenString {
 	}
 	return &TokenString{
 		value: string(tokenValue),
+	}
+}
+
+func (cs *CharScanner) handleComment() {
+	for cs.s.Peek() != '\n' && cs.s.Peek() != '\r' {
+		cs.s.Next()
 	}
 }
 

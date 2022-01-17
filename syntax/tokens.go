@@ -104,6 +104,10 @@ type (
 		tok
 	}
 
+	TokenComment struct {
+		tok
+	}
+
 	TokenNumber struct {
 		value string
 		tok

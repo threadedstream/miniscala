@@ -121,7 +121,10 @@ func run(code string) int {
 func main() {
 	path := "sources/101.miniscala"
 
-	program := syntax.Parse(path)
+	program, hadErrors := syntax.Parse(path)
+	if hadErrors {
+		return
+	}
 
 	//program := &syntax.Program{
 	//	StmtList: []syntax.Stmt{

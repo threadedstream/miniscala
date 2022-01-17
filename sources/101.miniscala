@@ -1,12 +1,13 @@
 
-def fac(x: Int): Int{
+// this is a factorial function
+def fac(x: Int): {
     if (x == 1) {
         return 1
     }
     return x * fac(x - 1)
 }
 
-
+// this is a fibonacci function
 def fib(n: Int): Int {
     if (n <= 1) {
         return 1

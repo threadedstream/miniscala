@@ -14,10 +14,19 @@ const (
 	LeftAssociative
 )
 
-type Parser struct {
-	tokenStream []Token
-	currIdx     int
-}
+type (
+	syntaxerror struct {
+		fmt  string
+		args []interface{}
+	}
+
+	Parser struct {
+		tokenStream []Token
+		currIdx     int
+		hadErrors   bool
+		errors      []syntaxerror
+	}
+)
 
 func (p *Parser) isOfType(lhs Token, rhs Token) bool {
 	return reflect.TypeOf(lhs) == reflect.TypeOf(rhs)
@@ -44,7 +53,12 @@ func (p *Parser) consume(token Token) {
 	if reflect.TypeOf(p.curr()) == reflect.TypeOf(token) {
 		p.next()
 	} else {
-		panic(fmt.Errorf("expected %s but got %s", tokToString(p.curr()), tokToString(token)))
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected %s but got %s",
+			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr()), tokToString(token)},
+		})
 	}
 }
 
@@ -128,7 +142,13 @@ func (p *Parser) atom() Node {
 			Value: ident.value,
 		}
 	default:
-		panic("unknown node in atom()")
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] unknown node in atom()",
+			args: []interface{}{errPos.Line, errPos.Column},
+		})
+		return &ErrExpr{}
 	}
 }
 
@@ -148,7 +168,13 @@ func (p *Parser) valDeclStmt() *ValDeclStmt {
 	var valDeclStmt = &ValDeclStmt{}
 	p.consume(&TokenVal{})
 	if !p.match(&TokenIdent{}) {
-		panic(fmt.Errorf("expected TokenIdent, but got %s", tokToString(p.curr())))
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected TokenIdent, but got %s",
+			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
+		})
+		return nil
 	}
 	tokenIdent := p.curr().(*TokenIdent)
 	valDeclStmt.Name = Name{Value: tokenIdent.value}
@@ -163,7 +189,13 @@ func (p *Parser) varDeclStmt() *VarDeclStmt {
 	var varDeclStmt = &VarDeclStmt{}
 	p.consume(&TokenVar{})
 	if !p.match(&TokenIdent{}) {
-		panic(fmt.Errorf("expected TokenIdent, but got %s", tokToString(p.curr())))
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected TokenIdent, but got %s",
+			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
+		})
+		return nil
 	}
 	tokenIdent := p.curr().(*TokenIdent)
 	varDeclStmt.Name = Name{Value: tokenIdent.value}
@@ -181,7 +213,13 @@ func (p *Parser) defDeclStmt() *DefDeclStmt {
 	)
 	p.consume(&TokenDef{})
 	if !p.match(&TokenIdent{}) {
-		panic(fmt.Errorf("expected name of the function, but got %s", tokToString(p.curr())))
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected name of the function, but got %s",
+			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
+		})
+		return nil
 	}
 	tokenIdent := p.curr().(*TokenIdent)
 	defDeclStmt.Name = &Name{Value: tokenIdent.value}
@@ -228,11 +266,23 @@ func (p *Parser) defDeclStmt() *DefDeclStmt {
 
 parseReturnType:
 	if !p.match(&TokenColon{}) {
-		panic(fmt.Errorf("expected a specification of return type, but got %s", tokToString(p.curr())))
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected a specification of return type, but got %s",
+			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
+		})
+		return nil
 	}
 	p.next()
 	if !p.match(&TokenIdent{}) {
-		panic(fmt.Errorf("expected a type name, but got %s", tokToString(p.curr())))
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected a type name, but got %s",
+			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
+		})
+		return nil
 	}
 	defDeclStmt.ReturnType = p.expr()
 	defDeclStmt.Body = p.blockStmt()
@@ -298,7 +348,13 @@ func (p *Parser) cond() Operation {
 	condition.Lhs = p.expr()
 	operator := tokenToOperator(p.curr())
 	if !IsComparisonOp(operator) {
-		panic(fmt.Errorf("expected operator, got %s", tokToString(p.curr())))
+		errorPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected operator, got %s",
+			args: []interface{}{errorPos.Line, errorPos.Column, tokToString(p.curr())},
+		})
+		return Operation{}
 	}
 	condition.Op = operator
 	p.next()
@@ -311,7 +367,12 @@ func (p *Parser) assignment() *Assignment {
 	var assignment = &Assignment{}
 	if !p.match(&TokenIdent{}) {
 		errorPos := p.curr().Pos()
-		panic(fmt.Errorf("[%d:%d] expected TokenIdent, but got %s", errorPos.Line, errorPos.Column, tokToString(p.curr())))
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected TokenIdent, but got %s",
+			args: []interface{}{errorPos.Line, errorPos.Column, tokToString(p.curr())},
+		})
+		return nil
 	}
 	ident := p.curr().(*TokenIdent)
 	p.next()
@@ -359,11 +420,17 @@ func (p *Parser) expr() Node {
 	case *TokenNumber, *TokenOpenParen, *TokenOpenBrace, *TokenIdent:
 		return p.binOp(0)
 	default:
-		panic(fmt.Errorf("expected TokenNumber, TokenOpenParen, TokenOpenBrace, TokenIdent, TokenVal, TokenVar, but got %s", tokToString(p.curr())))
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected TokenNumber, TokenOpenParen, TokenOpenBrace, TokenIdent, TokenVal, TokenVar, but got %s",
+			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
+		})
+		return &ErrExpr{}
 	}
 }
 
-func Parse(path string) *Program {
+func Parse(path string) (*Program, bool) {
 	stream, err := os.Open(path)
 	if err != nil {
 		panic("no file with such path was found")
@@ -377,7 +444,15 @@ func Parse(path string) *Program {
 		currIdx:     0,
 	}
 
-	return parser.program()
+	program := parser.program()
+
+	if parser.hadErrors {
+		for _, err := range parser.errors {
+			fmt.Fprintf(os.Stderr, err.fmt, err.args...)
+		}
+	}
+
+	return program, parser.hadErrors
 }
 
 func prec(token Token) int {

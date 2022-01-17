@@ -43,6 +43,10 @@ type (
 		Node
 	}
 
+	ErrExpr struct {
+		expr
+	}
+
 	Operation struct {
 		Op  Operator
 		Lhs Expr

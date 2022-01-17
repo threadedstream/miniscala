@@ -61,14 +61,5 @@ func lookup(name string, localEnv Environment, shouldPanic bool) (Value, bool) {
 }
 
 func state() {
-	for k, v := range environment {
-		fmt.Printf("%s: %v\n", k, v)
-		if v.isFunction() {
-			fmt.Printf("%s's local env:\n", k)
-			temp := v.asFunction()
-			for lk, lv := range temp.DefLocalEnv {
-				fmt.Printf("\t%s: %v\n", lk, lv)
-			}
-		}
-	}
+
 }

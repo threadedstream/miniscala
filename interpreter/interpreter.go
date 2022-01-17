@@ -214,7 +214,6 @@ func visitExpr(expr syntax.Expr, localEnv Environment) Value {
 		return visitOperation(expr, localEnv)
 	case *syntax.Call:
 		return visitCall(expr, localEnv)
-
 	}
 }
 
@@ -286,16 +285,20 @@ func visitCall(expr syntax.Expr, localEnv Environment) Value {
 	value, _ := lookup(call.CalleeName.Value, nil, true)
 	defValue := value.asFunction()
 
+	var funcFrame = make(Environment)
 	// TODO(threadedstream): do some checks regarding the number of passed arguments
 	for idx, arg := range call.ArgList {
 		argValue := visitExpr(arg, localEnv)
 		paramName := defValue.DefDeclStmt.ParamList[idx].Name.Value
-		store(paramName, argValue, defValue.DefLocalEnv, Assign)
+		store(paramName, argValue, funcFrame, Assign)
 	}
 
-	returnValue := visitStmt(defValue.DefDeclStmt.Body, defValue.DefLocalEnv)
+	returnValue := visitBlockStmt(defValue.DefDeclStmt.Body, funcFrame)
 
 	checkDefReturnType(returnValue, defValue.DefDeclStmt.ReturnType.(*syntax.Name).Value, defValue.DefDeclStmt.Name.Value)
+
+	// destroy local environment
+	funcFrame = nil
 
 	return returnValue
 }
@@ -303,7 +306,7 @@ func visitCall(expr syntax.Expr, localEnv Environment) Value {
 func visitReturnStmt(stmt syntax.Stmt, localEnv Environment) Value {
 	returnStmt := stmt.(*syntax.ReturnStmt)
 	returnValue := visitExpr(returnStmt.Value, localEnv)
-	returned = true
+	returnValue.Returned = true
 	return returnValue
 }
 
@@ -330,12 +333,11 @@ func visitBlockStmt(stmt syntax.Stmt, localEnv Environment) Value {
 		value Value
 	)
 
-	for _, stmt := range block.Stmts {
-		if returned {
-			returned = false
+	for _, currStmt := range block.Stmts {
+		value = visitStmt(currStmt, localEnv)
+		if value.Returned {
 			break
 		}
-		value = visitStmt(stmt, localEnv)
 	}
 
 	return value
@@ -343,14 +345,18 @@ func visitBlockStmt(stmt syntax.Stmt, localEnv Environment) Value {
 
 func visitIfStmt(stmt syntax.Stmt, localEnv Environment) Value {
 	var (
-		value  Value
+		value  = Value{ValueType: Null}
 		ifStmt = stmt.(*syntax.IfStmt)
 	)
+
 	if isCondTrue(ifStmt.Cond, localEnv) {
 		value = visitStmt(ifStmt.Body, localEnv)
 	} else {
-		value = visitStmt(ifStmt.ElseBody, localEnv)
+		if ifStmt.ElseBody != nil {
+			value = visitStmt(ifStmt.ElseBody, localEnv)
+		}
 	}
+
 	return value
 }
 
@@ -380,7 +386,6 @@ func visitDefDeclStmt(stmt syntax.Stmt, localEnv Environment) Value {
 	var (
 		defDeclStmt = stmt.(*syntax.DefDeclStmt)
 		returnType  = visitExpr(defDeclStmt.ReturnType, localEnv)
-		defLocalEnv = make(Environment)
 		defValue    = &DefValue{
 			DefDeclStmt: defDeclStmt,
 			ReturnType:  miniscalaTypeToValueType(returnType.asString()),
@@ -389,8 +394,6 @@ func visitDefDeclStmt(stmt syntax.Stmt, localEnv Environment) Value {
 			ValueType: Function,
 		}
 	)
-
-	defValue.DefLocalEnv = defLocalEnv
 
 	value.Value = defValue
 

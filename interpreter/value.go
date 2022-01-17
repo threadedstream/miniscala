@@ -23,12 +23,12 @@ type (
 		Value     interface{}
 		ValueType ValueType
 		Immutable bool
+		Returned  bool
 	}
 
 	// DefValue or Callable value
 	DefValue struct {
 		DefDeclStmt *syntax.DefDeclStmt
-		DefLocalEnv map[string]Value
 		ReturnType  ValueType
 	}
 )

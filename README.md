@@ -20,7 +20,7 @@ Voici un exemple of the program written in miniscala
       return fib(n - 1) + fib(n - 2)
   }
 
-  print(fac(fib(5)))
+  print(fac(fib(5))) // outputs 40320
 ```
 
 Basically, that's all to it. 

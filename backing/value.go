@@ -1,8 +1,15 @@
-package vm
+package backing
 
 import (
 	"github.com/ThreadedStream/miniscala/assert"
 	"github.com/ThreadedStream/miniscala/syntax"
+)
+
+type ExecutionContext int
+
+const (
+	TreeWalkInterpreter ExecutionContext = iota
+	Vm
 )
 
 type ValueType int
@@ -26,7 +33,7 @@ type (
 		Returned  bool
 	}
 
-	// DefValue or Callable value
+	// DefValue or Callable backing
 	DefValue struct {
 		DefDeclStmt *syntax.DefDeclStmt
 		ReturnType  ValueType
@@ -131,4 +138,107 @@ func (v Value) IsNull() bool {
 
 func (v Value) IsUndefined() bool {
 	return v.ValueType == Undefined
+}
+
+// add(x, y Value)
+
+func Add(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
+	if ctx == TreeWalkInterpreter {
+		if v1.ValueType == Ref {
+			v1, _ = Lookup(v1.AsString(), localEnv, true)
+		}
+		if v2.ValueType == Ref {
+			v2, _ = Lookup(v2.AsString(), localEnv, true)
+		}
+	}
+
+	switch v1.ValueType {
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	case Float:
+		return Value{
+			Value:     v1.AsFloat() + v2.AsFloat(),
+			ValueType: Float,
+		}
+	case String:
+		return Value{
+			Value:     v1.AsString() + v2.AsString(),
+			ValueType: String,
+		}
+	}
+}
+
+func Sub(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
+	if ctx == TreeWalkInterpreter {
+		if v1.ValueType == Ref {
+			v1, _ = Lookup(v1.AsString(), localEnv, true)
+		}
+		if v2.ValueType == Ref {
+			v2, _ = Lookup(v2.AsString(), localEnv, true)
+		}
+	}
+
+	switch v1.Value.(type) {
+	case float64:
+		return Value{
+			Value:     v1.AsFloat() - v2.AsFloat(),
+			ValueType: Float,
+		}
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	}
+}
+
+func Mul(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
+	if ctx == TreeWalkInterpreter {
+		if v1.ValueType == Ref {
+			v1, _ = Lookup(v1.AsString(), localEnv, true)
+		}
+		if v2.ValueType == Ref {
+			v2, _ = Lookup(v2.AsString(), localEnv, true)
+		}
+	}
+
+	switch v1.Value.(type) {
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	case float64:
+		return Value{
+			Value:     v1.AsFloat() * v2.AsFloat(),
+			ValueType: Float,
+		}
+	}
+}
+
+func Div(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
+	if ctx == TreeWalkInterpreter {
+		if v1.ValueType == Ref {
+			v1, _ = Lookup(v1.AsString(), localEnv, true)
+		}
+		if v2.ValueType == Ref {
+			v2, _ = Lookup(v2.AsString(), localEnv, true)
+		}
+	}
+
+	switch v1.Value.(type) {
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	case float64:
+		return Value{
+			Value:     v1.AsFloat() / v2.AsFloat(),
+			ValueType: Float,
+		}
+	}
 }

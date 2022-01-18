@@ -5,8 +5,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/ThreadedStream/miniscala/interpreter"
-	"github.com/ThreadedStream/miniscala/syntax"
+	"github.com/ThreadedStream/miniscala/backing"
+	"github.com/ThreadedStream/miniscala/vm"
 	"io"
 	"log"
 	"os"
@@ -119,12 +119,12 @@ func run(code string) int {
 }
 
 func main() {
-	path := "sources/101.miniscala"
+	//	path := "sources/101.miniscala"
 
-	program, hadErrors := syntax.Parse(path)
-	if hadErrors {
-		return
-	}
+	//program, hadErrors := syntax.Parse(path)
+	//if hadErrors {
+	//	return
+	//}
 
 	//program := &syntax.Program{
 	//	StmtList: []syntax.Stmt{
@@ -211,6 +211,33 @@ func main() {
 	//	},
 	//}
 
-	interpreter.Execute(program)
-	//	interpreter.DumpEnvState()
+	//interpreter.Execute(program)
+	//interpreter.DumpEnvState()
+
+	code := []vm.Instruction{
+		&vm.InstrLoad{
+			Value: backing.Value{
+				Value:     300.0,
+				ValueType: backing.Float,
+			},
+		},
+		&vm.InstrLoad{
+			Value: backing.Value{
+				Value:     500.0,
+				ValueType: backing.Float,
+			},
+		},
+		&vm.InstrAdd{},
+		&vm.InstrLoad{
+			Value: backing.Value{
+				Value:     600.0,
+				ValueType: backing.Float,
+			},
+		},
+		&vm.InstrSub{},
+	}
+
+	executionEnv := vm.InitializeVm(code)
+	executionEnv.Run()
+
 }

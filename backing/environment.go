@@ -1,11 +1,10 @@
-package interpreter
+package backing
 
 import (
 	"fmt"
-	"github.com/ThreadedStream/miniscala/vm"
 )
 
-type Environment map[string]vm.Value
+type Environment map[string]Value
 
 type StoringContext int
 
@@ -18,13 +17,7 @@ var (
 	environment = make(Environment)
 )
 
-// consider the following scenario
-// what most awful is that currently language permits it
-// def func(x: Int): Unit {
-// 		var x = 54
-// }
-// a possible solution is to add a storing context
-func store(name string, value vm.Value, localEnv Environment, ctx StoringContext) {
+func Store(name string, value Value, localEnv Environment, ctx StoringContext) {
 	if ctx == Declare {
 		_, ok := lookup(name, localEnv, false)
 		if ok {
@@ -39,22 +32,26 @@ func store(name string, value vm.Value, localEnv Environment, ctx StoringContext
 
 }
 
-func lookup(name string, localEnv Environment, shouldPanic bool) (vm.Value, bool) {
+func Lookup(name string, localEnv Environment, shouldPanic bool) (Value, bool) {
+	return lookup(name, localEnv, shouldPanic)
+}
+
+func lookup(name string, localEnv Environment, shouldPanic bool) (Value, bool) {
 	var (
-		val vm.Value
+		val Value
 		ok  bool
 	)
 
-	// search for the value in local environment first
+	// search for the backing in local environment first
 	val, ok = localEnv[name]
 	if !ok {
-		// in case of failure, try seeking value in the global one
+		// in case of failure, try seeking backing in the global one
 		val, ok = environment[name]
 		if !ok {
 			if shouldPanic {
 				panic(fmt.Errorf("no entry associated with name %s was found", name))
 			}
-			return vm.NullValue(), false
+			return NullValue(), false
 		}
 	}
 

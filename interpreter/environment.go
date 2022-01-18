@@ -2,9 +2,10 @@ package interpreter
 
 import (
 	"fmt"
+	"github.com/ThreadedStream/miniscala/vm"
 )
 
-type Environment map[string]Value
+type Environment map[string]vm.Value
 
 type StoringContext int
 
@@ -23,7 +24,7 @@ var (
 // 		var x = 54
 // }
 // a possible solution is to add a storing context
-func store(name string, value Value, localEnv Environment, ctx StoringContext) {
+func store(name string, value vm.Value, localEnv Environment, ctx StoringContext) {
 	if ctx == Declare {
 		_, ok := lookup(name, localEnv, false)
 		if ok {
@@ -38,9 +39,9 @@ func store(name string, value Value, localEnv Environment, ctx StoringContext) {
 
 }
 
-func lookup(name string, localEnv Environment, shouldPanic bool) (Value, bool) {
+func lookup(name string, localEnv Environment, shouldPanic bool) (vm.Value, bool) {
 	var (
-		val Value
+		val vm.Value
 		ok  bool
 	)
 
@@ -53,7 +54,7 @@ func lookup(name string, localEnv Environment, shouldPanic bool) (Value, bool) {
 			if shouldPanic {
 				panic(fmt.Errorf("no entry associated with name %s was found", name))
 			}
-			return nullValue(), false
+			return vm.NullValue(), false
 		}
 	}
 

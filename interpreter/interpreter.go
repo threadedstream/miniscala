@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ThreadedStream/miniscala/assert"
 	"github.com/ThreadedStream/miniscala/syntax"
+	"github.com/ThreadedStream/miniscala/vm"
 	"strconv"
 )
 
@@ -12,37 +13,37 @@ var (
 	returned bool
 )
 
-func checkOpValues(op syntax.Operator, v1, v2 Value, localEnv Environment) {
+func checkOpValues(op syntax.Operator, v1, v2 vm.Value, localEnv Environment) {
 
-	if v1.ValueType == Ref {
-		v1, _ = lookup(v1.asString(), localEnv, true)
+	if v1.ValueType == vm.Ref {
+		v1, _ = lookup(v1.AsString(), localEnv, true)
 	}
 
-	if v2.ValueType == Ref {
-		v2, _ = lookup(v2.asString(), localEnv, true)
+	if v2.ValueType == vm.Ref {
+		v2, _ = lookup(v2.AsString(), localEnv, true)
 	}
 
 	switch op {
 	default:
 		panic("unknown operation")
 	case syntax.Plus:
-		if (v1.isString() && v2.isString()) || (v1.isFloat() && v2.isFloat()) {
+		if (v1.IsString() && v2.IsString()) || (v1.IsFloat() && v2.IsFloat()) {
 			return
 		}
 		panic("v1 and v2 must both be of type string or float")
 	case syntax.Minus:
-		if v1.isFloat() && v2.isFloat() {
+		if v1.IsFloat() && v2.IsFloat() {
 			return
 		}
 		panic("v1 and v2 must both be of type float")
 	case syntax.Mul:
-		if v1.isFloat() && v2.isFloat() {
+		if v1.IsFloat() && v2.IsFloat() {
 			return
 		}
 		panic("v1 and v2 must both be of type float")
 	case syntax.Div:
-		if v1.isFloat() && v2.isFloat() {
-			if !v2.isZero() {
+		if v1.IsFloat() && v2.IsFloat() {
+			if !v2.IsZero() {
 				return
 			} else {
 				panic("division by zero")
@@ -51,12 +52,12 @@ func checkOpValues(op syntax.Operator, v1, v2 Value, localEnv Environment) {
 	}
 }
 
-func checkDefReturnType(v Value, defReturnType, funcName string) {
-	if v.ValueType == miniscalaTypeToValueType(defReturnType) {
+func checkDefReturnType(v vm.Value, defReturnType, funcName string) {
+	if v.ValueType == vm.MiniscalaTypeToValueType(defReturnType) {
 		return
 	}
 
-	panic(fmt.Errorf("(in %s()) expected to return a value of type %s, but it returned %s", funcName, defReturnType, v.valueTypeToStr()))
+	panic(fmt.Errorf("(in %s()) expected to return a value of type %s, but it returned %s", funcName, defReturnType, v.ValueTypeToStr()))
 }
 
 func isReservedFuncCall(funcName string) bool {
@@ -68,14 +69,108 @@ func isReservedFuncCall(funcName string) bool {
 	}
 }
 
-func unwrapValue(value Value) interface{} {
+func unwrapValue(value vm.Value) interface{} {
 	switch {
 	default:
 		return nil
-	case value.isString():
-		return value.asString()
-	case value.isFloat():
-		return value.asFloat()
+	case value.IsString():
+		return value.AsString()
+	case value.IsFloat():
+		return value.AsFloat()
+	}
+}
+
+func add(v1, v2 vm.Value, localEnv Environment) vm.Value {
+	if v1.ValueType == vm.Ref {
+		v1, _ = lookup(v1.AsString(), localEnv, true)
+	}
+	if v2.ValueType == vm.Ref {
+		v2, _ = lookup(v2.AsString(), localEnv, true)
+	}
+
+	switch v1.Value.(type) {
+	default:
+		return vm.Value{
+			Value:     nil,
+			ValueType: vm.Undefined,
+		}
+	case float64:
+		return vm.Value{
+			Value:     v1.AsFloat() + v2.AsFloat(),
+			ValueType: vm.Float,
+		}
+	case string:
+		return vm.Value{
+			Value:     v1.AsString() + v2.AsString(),
+			ValueType: vm.String,
+		}
+	}
+}
+
+func sub(v1, v2 vm.Value, localEnv Environment) vm.Value {
+	if v1.ValueType == vm.Ref {
+		v1, _ = lookup(v1.AsString(), localEnv, true)
+	}
+	if v2.ValueType == vm.Ref {
+		v2, _ = lookup(v2.AsString(), localEnv, true)
+	}
+
+	switch v1.Value.(type) {
+	case float64:
+		return vm.Value{
+			Value:     v1.AsFloat() - v2.AsFloat(),
+			ValueType: vm.Float,
+		}
+	default:
+		return vm.Value{
+			Value:     nil,
+			ValueType: vm.Undefined,
+		}
+	}
+}
+
+func mul(v1, v2 vm.Value, localEnv Environment) vm.Value {
+	if v1.ValueType == vm.Ref {
+		v1, _ = lookup(v1.AsString(), localEnv, true)
+	}
+	if v2.ValueType == vm.Ref {
+		v2, _ = lookup(v2.AsString(), localEnv, true)
+	}
+
+	switch v1.Value.(type) {
+	default:
+		return vm.Value{
+			Value:     nil,
+			ValueType: vm.Undefined,
+		}
+	case float64:
+		return vm.Value{
+			Value:     v1.AsFloat() * v2.AsFloat(),
+			ValueType: vm.Float,
+		}
+	}
+}
+
+func div(v1, v2 vm.Value, localEnv Environment) vm.Value {
+	if v1.ValueType == vm.Ref {
+		v1, _ = lookup(v1.AsString(), localEnv, true)
+	}
+
+	if v2.ValueType == vm.Ref {
+		v2, _ = lookup(v2.AsString(), localEnv, true)
+	}
+
+	switch v1.Value.(type) {
+	default:
+		return vm.Value{
+			Value:     nil,
+			ValueType: vm.Undefined,
+		}
+	case float64:
+		return vm.Value{
+			Value:     v1.AsFloat() / v2.AsFloat(),
+			ValueType: vm.Float,
+		}
 	}
 }
 
@@ -105,12 +200,12 @@ func checkAssignmentValidity(name string, localEnv Environment) error {
 	return nil
 }
 
-func resolveRef(v1 Value, localEnv Environment) Value {
+func resolveRef(v1 vm.Value, localEnv Environment) vm.Value {
 	switch {
 	default:
 		return v1
-	case v1.ValueType == Ref:
-		v, _ := lookup(v1.asString(), localEnv, true)
+	case v1.ValueType == vm.Ref:
+		v, _ := lookup(v1.AsString(), localEnv, true)
 		return v
 	}
 }
@@ -129,34 +224,34 @@ func isCondTrue(cond syntax.Operation, localEnv Environment) bool {
 	default:
 		return false
 	case syntax.GreaterThan:
-		if lhs.isString() && rhs.isString() {
-			return lhs.asString() > rhs.asString()
-		} else if lhs.isFloat() && rhs.isFloat() {
-			return lhs.asFloat() > rhs.asFloat()
+		if lhs.IsString() && rhs.IsString() {
+			return lhs.AsString() > rhs.AsString()
+		} else if lhs.IsFloat() && rhs.IsFloat() {
+			return lhs.AsFloat() > rhs.AsFloat()
 		} else {
 			panic("cast to string and float was unsuccessful")
 		}
 	case syntax.GreaterThanOrEqual:
-		if lhs.isString() && rhs.isString() {
-			return lhs.asString() >= rhs.asString()
-		} else if lhs.isFloat() && rhs.isFloat() {
-			return lhs.asFloat() >= rhs.asFloat()
+		if lhs.IsString() && rhs.IsString() {
+			return lhs.AsString() >= rhs.AsString()
+		} else if lhs.IsFloat() && rhs.IsFloat() {
+			return lhs.AsFloat() >= rhs.AsFloat()
 		} else {
 			panic("cast to string and float was unsuccessful")
 		}
 	case syntax.LessThan:
-		if lhs.isString() && rhs.isString() {
-			return lhs.asString() < rhs.asString()
-		} else if lhs.isFloat() && rhs.isFloat() {
-			return lhs.asFloat() < rhs.asFloat()
+		if lhs.IsString() && rhs.IsString() {
+			return lhs.AsString() < rhs.AsString()
+		} else if lhs.IsFloat() && rhs.IsFloat() {
+			return lhs.AsFloat() < rhs.AsFloat()
 		} else {
 			panic("cast to string and float was unsuccessful")
 		}
 	case syntax.LessThanOrEqual:
-		if lhs.isString() && rhs.isString() {
-			return lhs.asString() <= rhs.asString()
-		} else if lhs.isFloat() && rhs.isFloat() {
-			return lhs.asFloat() <= rhs.asFloat()
+		if lhs.IsString() && rhs.IsString() {
+			return lhs.AsString() <= rhs.AsString()
+		} else if lhs.IsFloat() && rhs.IsFloat() {
+			return lhs.AsFloat() <= rhs.AsFloat()
 		} else {
 			panic("cast to string and float was unsuccessful")
 		}
@@ -177,7 +272,7 @@ func DumpEnvState() {
 	state()
 }
 
-func visitStmt(stmt syntax.Stmt, localEnv Environment) Value {
+func visitStmt(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	switch stmt.(type) {
 	default:
 		// we don't allow it in perspective. Right now, we're totally good with that
@@ -202,10 +297,10 @@ func visitStmt(stmt syntax.Stmt, localEnv Environment) Value {
 	}
 }
 
-func visitExpr(expr syntax.Expr, localEnv Environment) Value {
+func visitExpr(expr syntax.Expr, localEnv Environment) vm.Value {
 	switch expr.(type) {
 	default:
-		return Value{Value: nil}
+		return vm.Value{Value: nil}
 	case *syntax.Name:
 		return visitName(expr)
 	case *syntax.BasicLit:
@@ -218,30 +313,30 @@ func visitExpr(expr syntax.Expr, localEnv Environment) Value {
 }
 
 // expressions
-func visitName(expr syntax.Expr) Value {
+func visitName(expr syntax.Expr) vm.Value {
 	name := expr.(*syntax.Name)
-	v := Value{
+	v := vm.Value{
 		Value:     name.Value,
-		ValueType: Ref,
+		ValueType: vm.Ref,
 	}
 	return v
 }
 
-func visitBasicLit(expr syntax.Expr) Value {
+func visitBasicLit(expr syntax.Expr) vm.Value {
 	basicLit := expr.(*syntax.BasicLit)
-	v := Value{}
+	v := vm.Value{}
 	switch basicLit.Kind {
 	case syntax.FloatLit:
 		v.Value, _ = strconv.ParseFloat(basicLit.Value, 64)
-		v.ValueType = Float
+		v.ValueType = vm.Float
 	case syntax.StringLit:
 		v.Value = basicLit.Value
-		v.ValueType = String
+		v.ValueType = vm.String
 	}
 	return v
 }
 
-func visitOperation(expr syntax.Expr, localEnv Environment) Value {
+func visitOperation(expr syntax.Expr, localEnv Environment) vm.Value {
 	operation := expr.(*syntax.Operation)
 	switch operation.Op {
 	default:
@@ -273,17 +368,17 @@ func visitOperation(expr syntax.Expr, localEnv Environment) Value {
 	}
 }
 
-func visitCall(expr syntax.Expr, localEnv Environment) Value {
+func visitCall(expr syntax.Expr, localEnv Environment) vm.Value {
 	call := expr.(*syntax.Call)
 
 	if isReservedFuncCall(call.CalleeName.Value) {
 		// dispatch in case if call to a reserved function has been made
 		dispatchReservedCall(call, localEnv)
-		return Value{}
+		return vm.Value{}
 	}
 
 	value, _ := lookup(call.CalleeName.Value, nil, true)
-	defValue := value.asFunction()
+	defValue := value.AsFunction()
 
 	var funcFrame = make(Environment)
 	// TODO(threadedstream): do some checks regarding the number of passed arguments
@@ -303,7 +398,7 @@ func visitCall(expr syntax.Expr, localEnv Environment) Value {
 	return returnValue
 }
 
-func visitReturnStmt(stmt syntax.Stmt, localEnv Environment) Value {
+func visitReturnStmt(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	returnStmt := stmt.(*syntax.ReturnStmt)
 	returnValue := visitExpr(returnStmt.Value, localEnv)
 	returnValue.Returned = true
@@ -311,26 +406,26 @@ func visitReturnStmt(stmt syntax.Stmt, localEnv Environment) Value {
 }
 
 // statements
-func visitVarDeclStmt(stmt syntax.Stmt, localEnv Environment) Value {
+func visitVarDeclStmt(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	varDecl := stmt.(*syntax.VarDeclStmt)
 	value := visitExpr(varDecl.Rhs, localEnv)
 	value.Immutable = false
 	store(varDecl.Name.Value, value, localEnv, Declare)
-	return Value{}
+	return vm.Value{}
 }
 
-func visitValDeclStmt(stmt syntax.Stmt, localEnv Environment) Value {
+func visitValDeclStmt(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	valDecl := stmt.(*syntax.ValDeclStmt)
 	value := visitExpr(valDecl.Rhs, localEnv)
 	value.Immutable = true
 	store(valDecl.Name.Value, value, localEnv, Declare)
-	return Value{}
+	return vm.Value{}
 }
 
-func visitBlockStmt(stmt syntax.Stmt, localEnv Environment) Value {
+func visitBlockStmt(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	var (
 		block = stmt.(*syntax.BlockStmt)
-		value Value
+		value vm.Value
 	)
 
 	for _, currStmt := range block.Stmts {
@@ -343,9 +438,9 @@ func visitBlockStmt(stmt syntax.Stmt, localEnv Environment) Value {
 	return value
 }
 
-func visitIfStmt(stmt syntax.Stmt, localEnv Environment) Value {
+func visitIfStmt(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	var (
-		value  = Value{ValueType: Null}
+		value  = vm.Value{ValueType: vm.Null}
 		ifStmt = stmt.(*syntax.IfStmt)
 	)
 
@@ -360,38 +455,38 @@ func visitIfStmt(stmt syntax.Stmt, localEnv Environment) Value {
 	return value
 }
 
-func visitWhileStmt(stmt syntax.Stmt, localEnv Environment) Value {
+func visitWhileStmt(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	var whileStmt = stmt.(*syntax.WhileStmt)
 	for isCondTrue(whileStmt.Cond, localEnv) {
 		visitStmt(whileStmt.Body, localEnv)
 	}
-	return Value{}
+	return vm.Value{}
 }
 
-func visitAssignment(stmt syntax.Stmt, localEnv Environment) Value {
+func visitAssignment(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	assignment := stmt.(*syntax.Assignment)
 	lhsValue := visitExpr(assignment.Lhs, localEnv)
-	if lhsValue.ValueType != Ref {
+	if lhsValue.ValueType != vm.Ref {
 		panic("lhs value in assignment should have a value type Ref")
 	}
 	rhsValue := visitExpr(assignment.Rhs, localEnv)
-	if err := checkAssignmentValidity(lhsValue.asString(), localEnv); err != nil {
+	if err := checkAssignmentValidity(lhsValue.AsString(), localEnv); err != nil {
 		panic(err)
 	}
-	store(lhsValue.asString(), rhsValue, localEnv, Assign)
-	return Value{}
+	store(lhsValue.AsString(), rhsValue, localEnv, Assign)
+	return vm.Value{}
 }
 
-func visitDefDeclStmt(stmt syntax.Stmt, localEnv Environment) Value {
+func visitDefDeclStmt(stmt syntax.Stmt, localEnv Environment) vm.Value {
 	var (
 		defDeclStmt = stmt.(*syntax.DefDeclStmt)
 		returnType  = visitExpr(defDeclStmt.ReturnType, localEnv)
-		defValue    = &DefValue{
+		defValue    = &vm.DefValue{
 			DefDeclStmt: defDeclStmt,
-			ReturnType:  miniscalaTypeToValueType(returnType.asString()),
+			ReturnType:  vm.MiniscalaTypeToValueType(returnType.AsString()),
 		}
-		value = Value{
-			ValueType: Function,
+		value = vm.Value{
+			ValueType: vm.Function,
 		}
 	)
 
@@ -400,5 +495,5 @@ func visitDefDeclStmt(stmt syntax.Stmt, localEnv Environment) Value {
 	// functions reside in global environment exclusively
 	store(defDeclStmt.Name.Value, value, nil, Declare)
 
-	return Value{}
+	return vm.Value{}
 }

@@ -42,7 +42,7 @@ const (
 
 // scanner
 
-// kind of compiler
+// kind of vm
 
 func prepareRuntimeLib() {
 	driverCode := `

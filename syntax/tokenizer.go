@@ -51,9 +51,6 @@ func (cs *CharScanner) Tokenize() []Token {
 		}
 	}
 
-	// append EOF token
-	tokens = append(tokens, &TokenEOF{})
-
 	return tokens
 }
 
@@ -282,6 +279,9 @@ func (cs *CharScanner) tokenizeString() *TokenString {
 		tokenValue = append(tokenValue, cs.s.Peek())
 		cs.s.Next()
 	}
+	// eat the trailing '"'
+	cs.s.Next()
+
 	return &TokenString{
 		value: string(tokenValue),
 	}

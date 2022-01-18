@@ -121,6 +121,13 @@ func (p *Parser) atom() Node {
 			Value: tokenNum.value,
 			Kind:  FloatLit,
 		}
+	case *TokenString:
+		tokenString := p.curr().(*TokenString)
+		p.consume(&TokenString{})
+		return &BasicLit{
+			Value: tokenString.value,
+			Kind:  StringLit,
+		}
 	case *TokenOpenParen:
 		p.consume(&TokenOpenParen{})
 		simpNode := p.expr()
@@ -417,7 +424,7 @@ func (p *Parser) stmts() []Stmt {
 
 func (p *Parser) expr() Node {
 	switch p.curr().(type) {
-	case *TokenNumber, *TokenOpenParen, *TokenOpenBrace, *TokenIdent:
+	case *TokenNumber, *TokenOpenParen, *TokenOpenBrace, *TokenIdent, *TokenString:
 		return p.binOp(0)
 	default:
 		errPos := p.curr().Pos()

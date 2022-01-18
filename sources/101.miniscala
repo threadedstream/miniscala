@@ -1,6 +1,6 @@
 
 // this is a factorial function
-def fac(x: Int): {
+def fac(x: Int): Int{
     if (x == 1) {
         return 1
     }
@@ -15,4 +15,4 @@ def fib(n: Int): Int {
     return fib(n - 1) + fib(n - 2)
 }
 
-print(fac(fib(5)))
+print("Hello, " + "World!")

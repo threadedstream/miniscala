@@ -30,6 +30,48 @@ type (
 		instr
 	}
 
+	InstrGreaterThan struct {
+		instr
+	}
+
+	InstrGreaterThanOrEqual struct {
+		instr
+	}
+
+	InstrLessThan struct {
+		instr
+	}
+
+	InstrLessThanOrEqual struct {
+		instr
+	}
+
+	InstrEqual struct {
+		instr
+	}
+
+	InstrTrue struct {
+		instr
+	}
+
+	InstrFalse struct {
+		instr
+	}
+
+	InstrNull struct {
+		instr
+	}
+	
+    InstrJmp struct {
+		Offset int
+		instr
+	}
+
+	InstrJmpIfFalse struct {
+		Offset int
+		instr
+	}
+
 	instr struct {
 		text string
 	}

@@ -33,6 +33,10 @@ func (vm *VM) resetStack() {
 	vm.stackPtr = 0
 }
 
+func (vm *VM) vmabort(fmt string, args ... interface{}) {
+	panic(fmt.Errorf(fmt, args))
+}
+
 func (vm *VM) push(v backing.Value) {
 	vm.stack[vm.stackPtr] = v
 	vm.stackPtr++
@@ -46,6 +50,8 @@ func (vm *VM) pop() backing.Value {
 func (vm *VM) Run() {
 	for vm.ip < len(vm.chunk.instrStream) {
 		switch vm.chunk.instrStream[vm.ip].(type) {
+		default:
+			vmabort("unknown instruction")
 		case *InstrAdd:
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
@@ -65,6 +71,64 @@ func (vm *VM) Run() {
 		case *InstrLoad:
 			load := vm.chunk.instrStream[vm.ip].(*InstrLoad)
 			vm.push(load.Value)
+		case *InstrGreaterThan:
+			secondOperand := vm.pop()
+			firstOperand := vm.pop()
+			boolValue := backing.Value{
+				Value: firstOperand > secondOperand,
+				ValueType: backing.Bool,
+			}
+			vm.push(boolValue)
+		case *InstrLessThan:
+			secondOperand := vm.pop()
+			firstOperand := vm.pop()
+			boolValue := backing.Value{
+				Value: firstOperand < secondOperand,
+				ValueType: backing.Bool,
+			}
+			vm.push(boolValue)
+		case *InstrGreaterThanOrEqual:
+			secondOperand := vm.pop()
+			firstOperand := vm.pop()
+			boolValue := backing.Value{
+				Value: firstOperand >= secondOperand,
+				ValueType: backing.Bool, 
+			}
+			vm.push(boolValue)
+		case *InstrLessThanOrEqual:
+			secondOperand := vm.pop()
+			firstOperand := vm.pop()
+			boolValue := backing.Value{
+				Value: firstOperand <= secondOperand,
+				ValueType: backing.Bool,
+			}
+			vm.push(boolValue)
+		case *InstrEqual:
+			secondOperand := vm.pop()
+			firstOperand := vm.pop()
+			boolValue := backing.Value{
+				Value: firstOperand == secondOperand,
+				ValueType: backing.Bool,
+			}
+			vm.push(boolValue)
+		case *InstrTrue:
+			boolValue := backing.Value{
+				Value: true,
+				ValueType: backing.Bool,
+			}
+			vm.push(boolValue)
+		case *InstrFalse:
+			boolValue := backing.Value{
+				Value: false,
+				ValueType: backing.Bool,
+			}
+			vm.push(boolValue)
+		case *InstrNull:
+			nullValue := backing.Value{
+				Value: nil,
+				ValueType: backing.Bool,
+			}
+			vm.push(nullValue)
 		}
 		vm.ip++
 	}

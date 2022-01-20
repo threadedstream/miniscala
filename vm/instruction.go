@@ -25,8 +25,13 @@ type (
 		instr
 	}
 
-	InstrLoad struct {
+	InstrLoadImm struct {
 		backing.Value
+		instr
+	}
+
+	InstrLoadArg struct {
+		Idx int
 		instr
 	}
 
@@ -61,14 +66,23 @@ type (
 	InstrNull struct {
 		instr
 	}
-	
-    InstrJmp struct {
+
+	InstrJmp struct {
 		Offset int
 		instr
 	}
 
 	InstrJmpIfFalse struct {
 		Offset int
+		instr
+	}
+
+	InstrCall struct {
+		FuncName string
+		instr
+	}
+
+	InstrReturn struct {
 		instr
 	}
 

@@ -215,26 +215,44 @@ func main() {
 	//interpreter.DumpEnvState()
 
 	code := []vm.Instruction{
-		&vm.InstrLoad{
+		&vm.InstrLoadArg{
+			Idx: 0,
+		},
+		&vm.InstrLoadImm{
 			Value: backing.Value{
-				Value:     300.0,
+				Value:     1.0,
 				ValueType: backing.Float,
 			},
 		},
-		&vm.InstrLoad{
+		&vm.InstrEqual{},
+		&vm.InstrJmpIfFalse{
+			Offset: 1,
+		},
+		&vm.InstrLoadImm{
 			Value: backing.Value{
-				Value:     500.0,
+				Value:     1.0,
 				ValueType: backing.Float,
 			},
 		},
-		&vm.InstrAdd{},
-		&vm.InstrLoad{
+		&vm.InstrReturn{},
+		&vm.InstrLoadArg{
+			Idx: 0,
+		},
+		&vm.InstrLoadArg{
+			Idx: 0,
+		},
+		&vm.InstrLoadImm{
 			Value: backing.Value{
-				Value:     600.0,
+				Value:     1.0,
 				ValueType: backing.Float,
 			},
 		},
 		&vm.InstrSub{},
+		&vm.InstrCall{
+			FuncName: "fac",
+		},
+		&vm.InstrMul{},
+		&vm.InstrReturn{},
 	}
 
 	executionEnv := vm.InitializeVm(code)

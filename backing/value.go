@@ -16,6 +16,7 @@ type ValueType int
 
 const (
 	Float ValueType = iota
+	Int
 	String
 	Unit // void
 	Bool // add functionality for bool later on
@@ -87,6 +88,11 @@ func (v Value) AsFloat() float64 {
 	return v.Value.(float64)
 }
 
+func (v Value) AsInt() int {
+	assert.Assert(v.IsInt(), "cannot cast value type %s to int", v.ValueTypeToStr())
+	return v.Value.(int)
+}
+
 func (v Value) AsString() string {
 	assert.Assert(v.IsString() || v.IsRef(), "cannot cast value type %s to string", v.ValueTypeToStr())
 	return v.Value.(string)
@@ -105,6 +111,11 @@ func (v Value) AsFunction() *DefValue {
 // change to v.ValueType == Float
 func (v Value) IsFloat() bool {
 	_, ok := v.Value.(float64)
+	return ok
+}
+
+func (v Value) IsInt() bool {
+	_, ok := v.Value.(int)
 	return ok
 }
 

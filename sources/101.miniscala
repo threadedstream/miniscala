@@ -1,6 +1,19 @@
 
 // this is a factorial function
 def fac(x: Int): Int{
+    // LOADARG 0
+    // LOADI 1
+    // EQUAL
+    // JMP_IF_FALSE 1
+    // LOADI 1
+    // RETURN
+    // LOADARG 0
+    // LOADARG 0
+    // LOADI 1
+    // SUB
+    // CALL fac
+    // MUL
+    // RETURN
     if (x == 1) {
         return 1
     }
@@ -9,10 +22,29 @@ def fac(x: Int): Int{
 
 // this is a fibonacci function
 def fib(n: Int): Int {
+    // LOADARG 0
+    // LOADI 1
+    // LESS_THAN_OR_EQ
+    // JMP_IF_FALSE 1
+    // RETURN 1
+    // LOADARG 0
+    // LOADI 1
+    // SUB
+    // CALL fib
+    // LOADARG 0
+    // LOADI 2
+    // SUB
+    // CALL fib
+    // ADD
+    // RETURN
     if (n <= 1) {
         return 1
     }
     return fib(n - 1) + fib(n - 2)
 }
 
+// LOADI "Hello, "
+// LOADI "World!"
+// ADD
+// CALL print
 print("Hello, " + "World!")

@@ -43,8 +43,11 @@ def fib(n: Int): Int {
     return fib(n - 1) + fib(n - 2)
 }
 
-// LOADI "Hello, "
-// LOADI "World!"
-// ADD
-// CALL print
-print("Hello, " + "World!")
+def main() {
+    // LOADI "Hello, "
+    // LOADI "World!"
+    // ADD
+    // CALL print
+    print("Hello, " + "World!")
+}
+

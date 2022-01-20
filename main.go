@@ -226,7 +226,7 @@ func main() {
 		},
 		&vm.InstrEqual{},
 		&vm.InstrJmpIfFalse{
-			Offset: 1,
+			Offset: 2,
 		},
 		&vm.InstrLoadImm{
 			Value: backing.Value{
@@ -250,6 +250,7 @@ func main() {
 		&vm.InstrSub{},
 		&vm.InstrCall{
 			FuncName: "fac",
+			ArgNum:   1,
 		},
 		&vm.InstrMul{},
 		&vm.InstrReturn{},

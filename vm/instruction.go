@@ -79,6 +79,7 @@ type (
 
 	InstrCall struct {
 		FuncName string
+		ArgNum   int
 		instr
 	}
 

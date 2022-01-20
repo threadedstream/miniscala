@@ -11,22 +11,28 @@ type Stack [256]backing.Value
 type Chunk struct {
 	instrStream []Instruction
 	localValues map[int]backing.Value
-	stackFrame  Stack
-	stackPtr    int
+}
+
+type ChainEntry struct {
+	chunk *Chunk
+	ip    int
 }
 
 type VM struct {
 	chunk        *Chunk
 	ip           int
 	chunkStore   map[string]*Chunk
+	stack        Stack
+	stackPtr     int
 	nestingLevel int
-	callChain    [256]*Chunk
+	callChain    [256]ChainEntry
 }
 
 func InitializeVm(code []Instruction) *VM {
 	vm := new(VM)
 	vm.chunk = newChunk(code)
 	vm.ip = 0
+	vm.nestingLevel = 1
 	vm.chunkStore = make(map[string]*Chunk)
 	vm.chunkStore["fac"] = vm.chunk
 	return vm
@@ -35,7 +41,6 @@ func InitializeVm(code []Instruction) *VM {
 func newChunk(code []Instruction) *Chunk {
 	chunk := new(Chunk)
 	chunk.instrStream = code
-	chunk.stackPtr = 0
 	chunk.localValues = make(map[int]backing.Value)
 	// TODO(threadedstream): erase it after testing
 	chunk.localValues[0] = backing.Value{
@@ -46,7 +51,7 @@ func newChunk(code []Instruction) *Chunk {
 }
 
 func (vm *VM) resetStack() {
-	vm.chunk.stackPtr = 0
+	vm.stackPtr = 0
 }
 
 func (vm *VM) abort(format string, args ...interface{}) {
@@ -69,13 +74,13 @@ func (vm *VM) lookupChunk(name string, shouldPanic bool) *Chunk {
 }
 
 func (vm *VM) push(v backing.Value) {
-	vm.chunk.stackFrame[vm.chunk.stackPtr] = v
-	vm.chunk.stackPtr++
+	vm.stack[vm.stackPtr] = v
+	vm.stackPtr++
 }
 
 func (vm *VM) pop() backing.Value {
-	vm.chunk.stackPtr--
-	return vm.chunk.stackFrame[vm.chunk.stackPtr]
+	vm.stackPtr--
+	return vm.stack[vm.stackPtr]
 }
 
 func (vm *VM) Run() {
@@ -171,28 +176,31 @@ func (vm *VM) Run() {
 		case *InstrJmpIfFalse:
 			jmpIfFalse := vm.chunk.instrStream[oldIp].(*InstrJmpIfFalse)
 			operand := vm.pop()
-			if operand.AsBool() {
-				vm.ip = jmpIfFalse.Offset
+			if !operand.AsBool() {
+				vm.ip = vm.ip + jmpIfFalse.Offset
 			}
 		case *InstrCall:
 			call := vm.chunk.instrStream[oldIp].(*InstrCall)
 			chunk := vm.lookupChunk(call.FuncName, true)
 			vm.chunk = chunk
-			vm.push(backing.Value{
-				Value:     vm.ip,
-				ValueType: backing.Int,
-			})
+			vm.callChain[vm.nestingLevel] = ChainEntry{
+				chunk: chunk,
+				ip:    vm.ip,
+			}
 			vm.nestingLevel++
-			vm.callChain[vm.nestingLevel] = chunk
 			vm.ip = 0
+			for i := 0; i < call.ArgNum; i++ {
+				value := vm.pop()
+				vm.chunk.localValues[i] = value
+			}
 		case *InstrReturn:
+			vm.nestingLevel--
 			if vm.nestingLevel == 0 {
 				vm.normalexit()
 			}
-			vm.nestingLevel--
 			returnValue := vm.pop()
-			vm.chunk = vm.callChain[vm.nestingLevel]
-			vm.ip = vm.pop().AsInt()
+			vm.chunk = vm.callChain[vm.nestingLevel].chunk
+			vm.ip = vm.callChain[vm.nestingLevel].ip
 			vm.push(returnValue)
 		}
 	}

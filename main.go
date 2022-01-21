@@ -5,8 +5,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/ThreadedStream/miniscala/interpreter"
 	"github.com/ThreadedStream/miniscala/syntax"
+	"github.com/ThreadedStream/miniscala/vm"
 	"io"
 	"log"
 	"os"
@@ -126,6 +126,8 @@ func main() {
 		return
 	}
 
+	vm.Compile(program)
+
 	//program := &syntax.Program{
 	//	StmtList: []syntax.Stmt{
 	//		&syntax.DefDeclStmt{
@@ -211,12 +213,12 @@ func main() {
 	//	},
 	//}
 
-	interpreter.Execute(program)
-	interpreter.DumpEnvState()
+	//interpreter.Execute(program)
+	//interpreter.DumpEnvState()
 
 	//factorialCode := []vm.Instruction{
-	//	&vm.InstrLoadArg{
-	//		Idx: 0,
+	//	&vm.InstrLoadRef{
+	//		RefName: "x",
 	//	},
 	//	&vm.InstrLoadImm{
 	//		Value: backing.Value{
@@ -235,11 +237,11 @@ func main() {
 	//		},
 	//	},
 	//	&vm.InstrReturn{},
-	//	&vm.InstrLoadArg{
-	//		Idx: 0,
+	//	&vm.InstrLoadRef{
+	//		RefName: "x",
 	//	},
-	//	&vm.InstrLoadArg{
-	//		Idx: 0,
+	//	&vm.InstrLoadRef{
+	//		RefName: "x",
 	//	},
 	//	&vm.InstrLoadImm{
 	//		Value: backing.Value{
@@ -250,15 +252,15 @@ func main() {
 	//	&vm.InstrSub{},
 	//	&vm.InstrCall{
 	//		FuncName: "fac",
-	//		ArgNum:   1,
+	//		ArgNames: []string{"x"},
 	//	},
 	//	&vm.InstrMul{},
 	//	&vm.InstrReturn{},
 	//}
 	//
 	//fibCode := []vm.Instruction{
-	//	&vm.InstrLoadArg{
-	//		Idx: 0,
+	//	&vm.InstrLoadRef{
+	//		RefName: "n",
 	//	},
 	//	&vm.InstrLoadImm{
 	//		Value: backing.Value{
@@ -277,8 +279,8 @@ func main() {
 	//		},
 	//	},
 	//	&vm.InstrReturn{},
-	//	&vm.InstrLoadArg{
-	//		Idx: 0,
+	//	&vm.InstrLoadRef{
+	//		RefName: "n",
 	//	},
 	//	&vm.InstrLoadImm{
 	//		Value: backing.Value{
@@ -289,10 +291,10 @@ func main() {
 	//	&vm.InstrSub{},
 	//	&vm.InstrCall{
 	//		FuncName: "fib",
-	//		ArgNum:   1,
+	//		ArgNames: []string{"n"},
 	//	},
-	//	&vm.InstrLoadArg{
-	//		Idx: 0,
+	//	&vm.InstrLoadRef{
+	//		RefName: "n",
 	//	},
 	//	&vm.InstrLoadImm{
 	//		Value: backing.Value{
@@ -303,7 +305,7 @@ func main() {
 	//	&vm.InstrSub{},
 	//	&vm.InstrCall{
 	//		FuncName: "fib",
-	//		ArgNum:   1,
+	//		ArgNames: []string{"n"},
 	//	},
 	//	&vm.InstrAdd{},
 	//	&vm.InstrReturn{},
@@ -318,15 +320,14 @@ func main() {
 	//	},
 	//	&vm.InstrCall{
 	//		FuncName: "fib",
-	//		ArgNum:   1,
+	//		ArgNames: []string{"n"},
 	//	},
 	//	&vm.InstrCall{
 	//		FuncName: "fac",
-	//		ArgNum:   1,
+	//		ArgNames: []string{"x"},
 	//	},
 	//	&vm.InstrCall{
 	//		FuncName: "print",
-	//		ArgNum:   1,
 	//	},
 	//	&vm.InstrReturn{},
 	//}

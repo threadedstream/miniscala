@@ -234,36 +234,36 @@ func visitBasicLit(expr syntax.Expr) backing.Value {
 	case syntax.StringLit:
 		v.Value = basicLit.Value
 		v.ValueType = backing.String
+	case syntax.IntLit:
+		v.Value, _ = strconv.ParseInt(basicLit.Value, 10, 64)
+		v.ValueType = backing.Int
+	case syntax.BoolLit:
+		v.Value, _ = strconv.ParseBool(basicLit.Value)
+		v.ValueType = backing.Bool
 	}
 	return v
 }
 
 func visitOperation(expr syntax.Expr, localEnv backing.Environment) backing.Value {
 	operation := expr.(*syntax.Operation)
+	lhsValue := visitExpr(operation.Lhs, localEnv)
+	rhsValue := visitExpr(operation.Rhs, localEnv)
 	switch operation.Op {
 	default:
 		panic("unknown operation")
 	case syntax.Plus:
-		lhsValue := visitExpr(operation.Lhs, localEnv)
-		rhsValue := visitExpr(operation.Rhs, localEnv)
 		checkOpValues(syntax.Plus, lhsValue, rhsValue, localEnv)
 		value := backing.Add(lhsValue, rhsValue, localEnv, backing.TreeWalkInterpreter)
 		return value
 	case syntax.Minus:
-		lhsValue := visitExpr(operation.Lhs, localEnv)
-		rhsValue := visitExpr(operation.Rhs, localEnv)
 		checkOpValues(syntax.Minus, lhsValue, rhsValue, localEnv)
 		value := backing.Sub(lhsValue, rhsValue, localEnv, backing.TreeWalkInterpreter)
 		return value
 	case syntax.Mul:
-		lhsValue := visitExpr(operation.Lhs, localEnv)
-		rhsValue := visitExpr(operation.Rhs, localEnv)
 		checkOpValues(syntax.Mul, lhsValue, rhsValue, localEnv)
 		value := backing.Mul(lhsValue, rhsValue, localEnv, backing.TreeWalkInterpreter)
 		return value
 	case syntax.Div:
-		lhsValue := visitExpr(operation.Lhs, localEnv)
-		rhsValue := visitExpr(operation.Rhs, localEnv)
 		checkOpValues(syntax.Div, lhsValue, rhsValue, localEnv)
 		value := backing.Div(lhsValue, rhsValue, localEnv, backing.TreeWalkInterpreter)
 		return value

@@ -152,4 +152,6 @@ type LitKind uint8
 const (
 	StringLit LitKind = iota
 	FloatLit
+	IntLit
+	BoolLit
 )

@@ -30,8 +30,8 @@ type (
 		instr
 	}
 
-	InstrLoadArg struct {
-		Idx int
+	InstrLoadRef struct {
+		RefName string
 		instr
 	}
 
@@ -79,7 +79,7 @@ type (
 
 	InstrCall struct {
 		FuncName string
-		ArgNum   int
+		ArgNames []string
 		instr
 	}
 

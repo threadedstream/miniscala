@@ -11,7 +11,7 @@ type Stack [256]backing.Value
 type Chunk struct {
 	funcName    string
 	instrStream []Instruction
-	localValues map[int]backing.Value
+	localValues map[string]backing.Value
 }
 
 type ChainEntry struct {
@@ -67,12 +67,7 @@ func InitializeVm(code ...[]Instruction) *VM {
 func newChunk(code []Instruction, name string) Chunk {
 	chunk := Chunk{}
 	chunk.instrStream = code
-	chunk.localValues = make(map[int]backing.Value)
-	// TODO(threadedstream): erase it after testing
-	chunk.localValues[0] = backing.Value{
-		Value:     5.0,
-		ValueType: backing.Float,
-	}
+	chunk.localValues = make(map[string]backing.Value)
 	chunk.funcName = name
 	return chunk
 }
@@ -136,9 +131,9 @@ func (vm *VM) Run() {
 		case *InstrLoadImm:
 			load := vm.chunk.instrStream[oldIp].(*InstrLoadImm)
 			vm.push(load.Value)
-		case *InstrLoadArg:
-			loadArg := vm.chunk.instrStream[oldIp].(*InstrLoadArg)
-			vm.push(vm.chunk.localValues[loadArg.Idx])
+		case *InstrLoadRef:
+			loadArg := vm.chunk.instrStream[oldIp].(*InstrLoadRef)
+			vm.push(vm.chunk.localValues[loadArg.RefName])
 		case *InstrGreaterThan:
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
@@ -218,11 +213,11 @@ func (vm *VM) Run() {
 			}
 			vm.chunk = chunk
 			vm.nestingLevel++
-			vm.chunk.localValues = make(map[int]backing.Value)
+			vm.chunk.localValues = make(map[string]backing.Value)
 			vm.ip = 0
-			for i := 0; i < call.ArgNum; i++ {
+			for i := 0; i < len(call.ArgNames); i++ {
 				value := vm.pop()
-				vm.chunk.localValues[i] = value
+				vm.chunk.localValues[call.ArgNames[i]] = value
 			}
 		case *InstrReturn:
 			if vm.nestingLevel <= 0 {

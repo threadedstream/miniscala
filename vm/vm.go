@@ -9,37 +9,63 @@ import (
 type Stack [256]backing.Value
 
 type Chunk struct {
+	funcName    string
 	instrStream []Instruction
 	localValues map[int]backing.Value
 }
 
 type ChainEntry struct {
-	chunk *Chunk
+	chunk Chunk
 	ip    int
 }
 
 type VM struct {
-	chunk        *Chunk
+	chunk        Chunk
 	ip           int
-	chunkStore   map[string]*Chunk
+	chunkStore   map[string]Chunk
 	stack        Stack
 	stackPtr     int
 	nestingLevel int
 	callChain    [256]ChainEntry
 }
 
-func InitializeVm(code []Instruction) *VM {
+func (vm *VM) isReservedCall(name string) bool {
+	switch name {
+	default:
+		return false
+	case "print":
+		return true
+	}
+}
+
+func (vm *VM) dispatchReservedCall(name string) {
+	switch name {
+	default:
+		vm.abort("%s is not a call to reserved function", name)
+	case "print":
+		vm.executePrint()
+	}
+}
+
+func (vm *VM) executePrint() {
+	valueToPrint := vm.pop()
+	fmt.Printf("%v", valueToPrint.Value)
+}
+
+func InitializeVm(code ...[]Instruction) *VM {
 	vm := new(VM)
-	vm.chunk = newChunk(code)
+	vm.chunkStore = make(map[string]Chunk)
+	vm.chunkStore["main"] = newChunk(code[0], "main")
+	vm.chunkStore["fac"] = newChunk(code[1], "fac")
+	vm.chunkStore["fib"] = newChunk(code[2], "fib")
+	vm.chunk = vm.chunkStore["main"]
 	vm.ip = 0
-	vm.nestingLevel = 1
-	vm.chunkStore = make(map[string]*Chunk)
-	vm.chunkStore["fac"] = vm.chunk
+	vm.nestingLevel = 0
 	return vm
 }
 
-func newChunk(code []Instruction) *Chunk {
-	chunk := new(Chunk)
+func newChunk(code []Instruction, name string) Chunk {
+	chunk := Chunk{}
 	chunk.instrStream = code
 	chunk.localValues = make(map[int]backing.Value)
 	// TODO(threadedstream): erase it after testing
@@ -47,6 +73,7 @@ func newChunk(code []Instruction) *Chunk {
 		Value:     5.0,
 		ValueType: backing.Float,
 	}
+	chunk.funcName = name
 	return chunk
 }
 
@@ -62,13 +89,13 @@ func (vm *VM) normalexit() {
 	os.Exit(1)
 }
 
-func (vm *VM) lookupChunk(name string, shouldPanic bool) *Chunk {
+func (vm *VM) lookupChunk(name string, shouldPanic bool) Chunk {
 	chunk, ok := vm.chunkStore[name]
 	if !ok {
 		if shouldPanic {
 			vm.abort("no chunk associated with name %s", name)
 		}
-		return nil
+		return Chunk{}
 	}
 	return chunk
 }
@@ -166,8 +193,7 @@ func (vm *VM) Run() {
 			vm.push(boolValue)
 		case *InstrNull:
 			nullValue := backing.Value{
-				Value:     nil,
-				ValueType: backing.Bool,
+				ValueType: backing.Null,
 			}
 			vm.push(nullValue)
 		case *InstrJmp:
@@ -181,23 +207,29 @@ func (vm *VM) Run() {
 			}
 		case *InstrCall:
 			call := vm.chunk.instrStream[oldIp].(*InstrCall)
+			if vm.isReservedCall(call.FuncName) {
+				vm.dispatchReservedCall(call.FuncName)
+				break
+			}
 			chunk := vm.lookupChunk(call.FuncName, true)
-			vm.chunk = chunk
 			vm.callChain[vm.nestingLevel] = ChainEntry{
-				chunk: chunk,
+				chunk: vm.chunk,
 				ip:    vm.ip,
 			}
+			vm.chunk = chunk
 			vm.nestingLevel++
+			vm.chunk.localValues = make(map[int]backing.Value)
 			vm.ip = 0
 			for i := 0; i < call.ArgNum; i++ {
 				value := vm.pop()
 				vm.chunk.localValues[i] = value
 			}
 		case *InstrReturn:
-			vm.nestingLevel--
-			if vm.nestingLevel == 0 {
+			if vm.nestingLevel <= 0 {
 				vm.normalexit()
 			}
+			vm.callChain[vm.nestingLevel] = ChainEntry{}
+			vm.nestingLevel--
 			returnValue := vm.pop()
 			vm.chunk = vm.callChain[vm.nestingLevel].chunk
 			vm.ip = vm.callChain[vm.nestingLevel].ip

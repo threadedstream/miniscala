@@ -4,7 +4,7 @@ def fac(x: Int): Int{
     // LOADARG 0
     // LOADI 1
     // EQUAL
-    // JMP_IF_FALSE 1
+    // JMP_IF_FALSE 2
     // LOADI 1
     // RETURN
     // LOADARG 0
@@ -25,8 +25,9 @@ def fib(n: Int): Int {
     // LOADARG 0
     // LOADI 1
     // LESS_THAN_OR_EQ
-    // JMP_IF_FALSE 1
-    // RETURN 1
+    // JMP_IF_FALSE 2
+    // LOADI 1
+    // RETURN
     // LOADARG 0
     // LOADI 1
     // SUB
@@ -43,11 +44,13 @@ def fib(n: Int): Int {
     return fib(n - 1) + fib(n - 2)
 }
 
-def main() {
-    // LOADI "Hello, "
-    // LOADI "World!"
-    // ADD
+def main(): Unit {
+    // LOADI 5
+    // CALL fib
+    // CALL fac
     // CALL print
-    print("Hello, " + "World!")
+    // LOADI 1
+    // RETURN
+    print(fac(fib(5)))
 }
 

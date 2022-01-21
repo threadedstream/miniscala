@@ -5,8 +5,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/ThreadedStream/miniscala/backing"
-	"github.com/ThreadedStream/miniscala/vm"
+	"github.com/ThreadedStream/miniscala/interpreter"
+	"github.com/ThreadedStream/miniscala/syntax"
 	"io"
 	"log"
 	"os"
@@ -119,12 +119,12 @@ func run(code string) int {
 }
 
 func main() {
-	//	path := "sources/101.miniscala"
+	path := "sources/101.miniscala"
 
-	//program, hadErrors := syntax.Parse(path)
-	//if hadErrors {
-	//	return
-	//}
+	program, hadErrors := syntax.Parse(path)
+	if hadErrors {
+		return
+	}
 
 	//program := &syntax.Program{
 	//	StmtList: []syntax.Stmt{
@@ -211,52 +211,127 @@ func main() {
 	//	},
 	//}
 
-	//interpreter.Execute(program)
-	//interpreter.DumpEnvState()
+	interpreter.Execute(program)
+	interpreter.DumpEnvState()
 
-	code := []vm.Instruction{
-		&vm.InstrLoadArg{
-			Idx: 0,
-		},
-		&vm.InstrLoadImm{
-			Value: backing.Value{
-				Value:     1.0,
-				ValueType: backing.Float,
-			},
-		},
-		&vm.InstrEqual{},
-		&vm.InstrJmpIfFalse{
-			Offset: 2,
-		},
-		&vm.InstrLoadImm{
-			Value: backing.Value{
-				Value:     1.0,
-				ValueType: backing.Float,
-			},
-		},
-		&vm.InstrReturn{},
-		&vm.InstrLoadArg{
-			Idx: 0,
-		},
-		&vm.InstrLoadArg{
-			Idx: 0,
-		},
-		&vm.InstrLoadImm{
-			Value: backing.Value{
-				Value:     1.0,
-				ValueType: backing.Float,
-			},
-		},
-		&vm.InstrSub{},
-		&vm.InstrCall{
-			FuncName: "fac",
-			ArgNum:   1,
-		},
-		&vm.InstrMul{},
-		&vm.InstrReturn{},
-	}
-
-	executionEnv := vm.InitializeVm(code)
-	executionEnv.Run()
+	//factorialCode := []vm.Instruction{
+	//	&vm.InstrLoadArg{
+	//		Idx: 0,
+	//	},
+	//	&vm.InstrLoadImm{
+	//		Value: backing.Value{
+	//			Value:     1.0,
+	//			ValueType: backing.Float,
+	//		},
+	//	},
+	//	&vm.InstrEqual{},
+	//	&vm.InstrJmpIfFalse{
+	//		Offset: 2,
+	//	},
+	//	&vm.InstrLoadImm{
+	//		Value: backing.Value{
+	//			Value:     1.0,
+	//			ValueType: backing.Float,
+	//		},
+	//	},
+	//	&vm.InstrReturn{},
+	//	&vm.InstrLoadArg{
+	//		Idx: 0,
+	//	},
+	//	&vm.InstrLoadArg{
+	//		Idx: 0,
+	//	},
+	//	&vm.InstrLoadImm{
+	//		Value: backing.Value{
+	//			Value:     1.0,
+	//			ValueType: backing.Float,
+	//		},
+	//	},
+	//	&vm.InstrSub{},
+	//	&vm.InstrCall{
+	//		FuncName: "fac",
+	//		ArgNum:   1,
+	//	},
+	//	&vm.InstrMul{},
+	//	&vm.InstrReturn{},
+	//}
+	//
+	//fibCode := []vm.Instruction{
+	//	&vm.InstrLoadArg{
+	//		Idx: 0,
+	//	},
+	//	&vm.InstrLoadImm{
+	//		Value: backing.Value{
+	//			Value:     1.0,
+	//			ValueType: backing.Float,
+	//		},
+	//	},
+	//	&vm.InstrLessThanOrEqual{},
+	//	&vm.InstrJmpIfFalse{
+	//		Offset: 2,
+	//	},
+	//	&vm.InstrLoadImm{
+	//		Value: backing.Value{
+	//			Value:     1.0,
+	//			ValueType: backing.Float,
+	//		},
+	//	},
+	//	&vm.InstrReturn{},
+	//	&vm.InstrLoadArg{
+	//		Idx: 0,
+	//	},
+	//	&vm.InstrLoadImm{
+	//		Value: backing.Value{
+	//			Value:     1.0,
+	//			ValueType: backing.Float,
+	//		},
+	//	},
+	//	&vm.InstrSub{},
+	//	&vm.InstrCall{
+	//		FuncName: "fib",
+	//		ArgNum:   1,
+	//	},
+	//	&vm.InstrLoadArg{
+	//		Idx: 0,
+	//	},
+	//	&vm.InstrLoadImm{
+	//		Value: backing.Value{
+	//			Value:     2.0,
+	//			ValueType: backing.Float,
+	//		},
+	//	},
+	//	&vm.InstrSub{},
+	//	&vm.InstrCall{
+	//		FuncName: "fib",
+	//		ArgNum:   1,
+	//	},
+	//	&vm.InstrAdd{},
+	//	&vm.InstrReturn{},
+	//}
+	//
+	//mainCode := []vm.Instruction{
+	//	&vm.InstrLoadImm{
+	//		Value: backing.Value{
+	//			Value:     5.0,
+	//			ValueType: backing.Float,
+	//		},
+	//	},
+	//	&vm.InstrCall{
+	//		FuncName: "fib",
+	//		ArgNum:   1,
+	//	},
+	//	&vm.InstrCall{
+	//		FuncName: "fac",
+	//		ArgNum:   1,
+	//	},
+	//	&vm.InstrCall{
+	//		FuncName: "print",
+	//		ArgNum:   1,
+	//	},
+	//	&vm.InstrReturn{},
+	//}
+	//
+	//executionEnv := vm.InitializeVm(mainCode, factorialCode, fibCode)
+	//executionEnv.Run()
 
 }

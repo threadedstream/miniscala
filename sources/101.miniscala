@@ -1,14 +1,14 @@
 
 // this is a factorial function
 def fac(x: Int): Int{
-    // LOADREF x
+    // LOADREF 0
     // LOADI 1
     // EQUAL
     // JMP_IF_FALSE 2
     // LOADI 1
     // RETURN
-    // LOADREF x
-    // LOADREF x
+    // LOADREF 0
+    // LOADREF 0
     // LOADI 1
     // SUB
     // CALL fac

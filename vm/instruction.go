@@ -79,7 +79,7 @@ type (
 
 	InstrCall struct {
 		FuncName string
-		ArgNames []string
+		ArgNames [256]string
 		instr
 	}
 
@@ -95,12 +95,3 @@ type (
 func (i instr) Str() string {
 	return i.text
 }
-
-//const (
-//	InstrAdd Instruction = iota
-//	InstrSub
-//	InstrMul
-//	InstrDiv
-//	InstrLoad
-//	InstrStore
-//)

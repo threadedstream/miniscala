@@ -8,12 +8,6 @@ import (
 
 type Stack [256]backing.Value
 
-type Chunk struct {
-	funcName    string
-	instrStream []Instruction
-	localValues map[string]backing.Value
-}
-
 type ChainEntry struct {
 	chunk Chunk
 	ip    int
@@ -22,7 +16,6 @@ type ChainEntry struct {
 type VM struct {
 	chunk        Chunk
 	ip           int
-	chunkStore   map[string]Chunk
 	stack        Stack
 	stackPtr     int
 	nestingLevel int
@@ -54,22 +47,14 @@ func (vm *VM) executePrint() {
 
 func InitializeVm(code ...[]Instruction) *VM {
 	vm := new(VM)
-	vm.chunkStore = make(map[string]Chunk)
-	vm.chunkStore["main"] = newChunk(code[0], "main")
-	vm.chunkStore["fac"] = newChunk(code[1], "fac")
-	vm.chunkStore["fib"] = newChunk(code[2], "fib")
-	vm.chunk = vm.chunkStore["main"]
+	chunkStore = make(map[string]Chunk)
+	chunkStore["main"] = newChunk(code[0], "main")
+	chunkStore["fac"] = newChunk(code[1], "fac")
+	chunkStore["fib"] = newChunk(code[2], "fib")
+	vm.chunk = chunkStore["main"]
 	vm.ip = 0
 	vm.nestingLevel = 0
 	return vm
-}
-
-func newChunk(code []Instruction, name string) Chunk {
-	chunk := Chunk{}
-	chunk.instrStream = code
-	chunk.localValues = make(map[string]backing.Value)
-	chunk.funcName = name
-	return chunk
 }
 
 func (vm *VM) resetStack() {
@@ -82,17 +67,6 @@ func (vm *VM) abort(format string, args ...interface{}) {
 
 func (vm *VM) normalexit() {
 	os.Exit(1)
-}
-
-func (vm *VM) lookupChunk(name string, shouldPanic bool) Chunk {
-	chunk, ok := vm.chunkStore[name]
-	if !ok {
-		if shouldPanic {
-			vm.abort("no chunk associated with name %s", name)
-		}
-		return Chunk{}
-	}
-	return chunk
 }
 
 func (vm *VM) push(v backing.Value) {
@@ -206,7 +180,7 @@ func (vm *VM) Run() {
 				vm.dispatchReservedCall(call.FuncName)
 				break
 			}
-			chunk := vm.lookupChunk(call.FuncName, true)
+			chunk := lookupChunk(call.FuncName, true, vm.abort)
 			vm.callChain[vm.nestingLevel] = ChainEntry{
 				chunk: vm.chunk,
 				ip:    vm.ip,

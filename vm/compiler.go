@@ -10,10 +10,14 @@ var (
 	code []Instruction
 )
 
-type Compiler struct {
-	Code              []Instruction
+type compiler struct {
+	code              []Instruction
 	hadCompilerErrors bool
 	errors            []string
+}
+
+func newCompiler() *compiler {
+	return new(compiler)
 }
 
 func litKindToValueType(kind syntax.LitKind) backing.ValueType {
@@ -31,75 +35,74 @@ func litKindToValueType(kind syntax.LitKind) backing.ValueType {
 	}
 }
 
-func Compile(program *syntax.Program) []Instruction {
+func (c *compiler) compile(program *syntax.Program) {
 	for _, stmt := range program.StmtList {
-		compileStmt(stmt)
+		c.compileStmt(stmt)
 	}
-
-	return code
 }
 
-func compileStmt(stmt syntax.Stmt) {
+func (c *compiler) compileStmt(stmt syntax.Stmt) {
 	switch stmt.(type) {
 	default:
-		compileExpr(stmt)
+		c.compileExpr(stmt)
 	case *syntax.BlockStmt:
-		compileBlockStmt(stmt)
+		c.compileBlockStmt(stmt)
 	case *syntax.IfStmt:
-		compileIfStmt(stmt)
+		c.compileIfStmt(stmt)
 	case *syntax.ReturnStmt:
-		compileReturnStmt(stmt)
+		c.compileReturnStmt(stmt)
 	case *syntax.DefDeclStmt:
-		compileDefDeclStmt(stmt)
+		c.compileDefDeclStmt(stmt)
 	}
 }
 
-func compileBlockStmt(stmt syntax.Stmt) {
+func (c *compiler) compileBlockStmt(stmt syntax.Stmt) {
 	block := stmt.(*syntax.BlockStmt)
-
 	for _, currStmt := range block.Stmts {
-		compileStmt(currStmt)
+		c.compileStmt(currStmt)
 	}
 }
 
-func compileIfStmt(stmt syntax.Stmt) {
+func (c *compiler) compileIfStmt(stmt syntax.Stmt) {
 	ifStmt := stmt.(*syntax.IfStmt)
-
-	compileExpr(&ifStmt.Cond)
+	c.compileExpr(&ifStmt.Cond)
 	jmpIfFalseInstr := &InstrJmpIfFalse{}
 	code = append(code, jmpIfFalseInstr)
 	priorCodeLen := len(code)
-	compileBlockStmt(ifStmt.Body)
+	c.compileBlockStmt(ifStmt.Body)
 	posteriorCodeLen := len(code)
 	jmpIfFalseInstr.Offset = posteriorCodeLen - priorCodeLen
 }
 
-func compileDefDeclStmt(stmt syntax.Stmt) {
+func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 	defStmt := stmt.(*syntax.DefDeclStmt)
-	chunk := Chunk{
-		funcName: defStmt.Name.Value,
+	chunk := newChunk(nil, defStmt.Name.Value)
+	for _, param := range defStmt.ParamList {
+		chunk.localValues[param.Name.Value] = backing.NullValue()
 	}
-	compileBlockStmt(defStmt.Body)
+
+	chunkStore[defStmt.Name.Value] = chunk
+	c.compileBlockStmt(defStmt.Body)
 	chunk.instrStream = code
 }
 
-func compileExpr(expr syntax.Expr) {
+func (c *compiler) compileExpr(expr syntax.Expr) {
 	switch expr.(type) {
 	default:
 		// TODO(threadedstream): get out of habit panicking right away
 		panic("unknown expression ")
 	case *syntax.BasicLit:
-		compileBasicLit(expr)
+		c.compileBasicLit(expr)
 	case *syntax.Name:
-		compileName(expr)
+		c.compileName(expr)
 	case *syntax.Operation:
-		compileOperation(expr)
+		c.compileOperation(expr)
 	case *syntax.Call:
-		compileCall(expr)
+		c.compileCall(expr)
 	}
 }
 
-func compileBasicLit(expr syntax.Expr) {
+func (c *compiler) compileBasicLit(expr syntax.Expr) {
 	basicLit := expr.(*syntax.BasicLit)
 	loadInstr := &InstrLoadImm{}
 	var value backing.Value
@@ -122,7 +125,7 @@ func compileBasicLit(expr syntax.Expr) {
 	code = append(code, loadInstr)
 }
 
-func compileName(expr syntax.Expr) {
+func (c *compiler) compileName(expr syntax.Expr) {
 	name := expr.(*syntax.Name)
 	loadRefInstr := &InstrLoadRef{
 		RefName: name.Value,
@@ -130,14 +133,29 @@ func compileName(expr syntax.Expr) {
 	code = append(code, loadRefInstr)
 }
 
-func compileCall(expr syntax.Expr) {
+func (c *compiler) compileCall(expr syntax.Expr) {
+	call := expr.(*syntax.Call)
+	chunk := lookupChunk(call.CalleeName.Value, true, nil)
+	callInstr := &InstrCall{
+		FuncName: call.CalleeName.Value,
+	}
 
+	for _, arg := range call.ArgList {
+		c.compileExpr(arg)
+	}
+
+	i := 0
+	for k, _ := range chunk.localValues {
+		callInstr.ArgNames[i] = k
+	}
+
+	code = append(code, callInstr)
 }
 
-func compileOperation(expr syntax.Expr) {
+func (c *compiler) compileOperation(expr syntax.Expr) {
 	operation := expr.(*syntax.Operation)
-	compileExpr(operation.Lhs)
-	compileExpr(operation.Rhs)
+	c.compileExpr(operation.Lhs)
+	c.compileExpr(operation.Rhs)
 	switch operation.Op {
 	default:
 		// TODO(threadedstream): handle an error
@@ -163,8 +181,8 @@ func compileOperation(expr syntax.Expr) {
 	}
 }
 
-func compileReturnStmt(stmt syntax.Stmt) {
+func (c *compiler) compileReturnStmt(stmt syntax.Stmt) {
 	returnStmt := stmt.(*syntax.ReturnStmt)
-	compileExpr(returnStmt.Value)
+	c.compileExpr(returnStmt.Value)
 	code = append(code, &InstrReturn{})
 }

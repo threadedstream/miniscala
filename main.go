@@ -126,7 +126,9 @@ func main() {
 		return
 	}
 
-	vm.Compile(program)
+	execVm := vm.NewVM(program)
+
+	execVm.Run()
 
 	//program := &syntax.Program{
 	//	StmtList: []syntax.Stmt{

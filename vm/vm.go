@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"github.com/ThreadedStream/miniscala/backing"
+	"github.com/ThreadedStream/miniscala/syntax"
 	"os"
 )
 
@@ -22,7 +23,7 @@ type VM struct {
 	callChain    [256]ChainEntry
 }
 
-func (vm *VM) isReservedCall(name string) bool {
+func isReservedCall(name string) bool {
 	switch name {
 	default:
 		return false
@@ -45,13 +46,11 @@ func (vm *VM) executePrint() {
 	fmt.Printf("%v", valueToPrint.Value)
 }
 
-func InitializeVm(code ...[]Instruction) *VM {
+func NewVM(program *syntax.Program) *VM {
+	comp := newCompiler()
+	comp.compile(program)
 	vm := new(VM)
-	chunkStore = make(map[string]Chunk)
-	chunkStore["main"] = newChunk(code[0], "main")
-	chunkStore["fac"] = newChunk(code[1], "fac")
-	chunkStore["fib"] = newChunk(code[2], "fib")
-	vm.chunk = chunkStore["main"]
+	vm.chunk = lookupChunk("main", true, vm.abort)
 	vm.ip = 0
 	vm.nestingLevel = 0
 	return vm
@@ -176,7 +175,7 @@ func (vm *VM) Run() {
 			}
 		case *InstrCall:
 			call := vm.chunk.instrStream[oldIp].(*InstrCall)
-			if vm.isReservedCall(call.FuncName) {
+			if isReservedCall(call.FuncName) {
 				vm.dispatchReservedCall(call.FuncName)
 				break
 			}

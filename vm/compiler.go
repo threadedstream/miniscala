@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	code []Instruction
+	// TODO(threadedstream): add more reserved functions
+	reservedFuncNames = []string{"print"}
 )
 
 type compiler struct {
@@ -35,7 +36,15 @@ func litKindToValueType(kind syntax.LitKind) backing.ValueType {
 	}
 }
 
+func (c *compiler) prepareReservedFunctions() {
+	for _, funcName := range reservedFuncNames {
+		chunk := newChunk(nil, funcName)
+		chunkStore[funcName] = chunk
+	}
+}
+
 func (c *compiler) compile(program *syntax.Program) {
+	c.prepareReservedFunctions()
 	for _, stmt := range program.StmtList {
 		c.compileStmt(stmt)
 	}
@@ -67,10 +76,10 @@ func (c *compiler) compileIfStmt(stmt syntax.Stmt) {
 	ifStmt := stmt.(*syntax.IfStmt)
 	c.compileExpr(&ifStmt.Cond)
 	jmpIfFalseInstr := &InstrJmpIfFalse{}
-	code = append(code, jmpIfFalseInstr)
-	priorCodeLen := len(code)
+	c.code = append(c.code, jmpIfFalseInstr)
+	priorCodeLen := len(c.code)
 	c.compileBlockStmt(ifStmt.Body)
-	posteriorCodeLen := len(code)
+	posteriorCodeLen := len(c.code)
 	jmpIfFalseInstr.Offset = posteriorCodeLen - priorCodeLen
 }
 
@@ -83,7 +92,22 @@ func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 
 	chunkStore[defStmt.Name.Value] = chunk
 	c.compileBlockStmt(defStmt.Body)
-	chunk.instrStream = code
+	switch c.code[len(c.code)-1].(type) {
+	default:
+		c.code = append(c.code, &InstrReturn{})
+	case *InstrReturn:
+		break
+	}
+
+	// dirty hack to mutate an element in a map
+	chunk = chunkStore[defStmt.Name.Value]
+
+	// allocate a space for an instruction buffer
+	chunk.instrStream = make([]Instruction, len(c.code))
+	copy(chunk.instrStream, c.code)
+	c.code = nil
+	c.code = make([]Instruction, 0)
+	chunkStore[defStmt.Name.Value] = chunk
 }
 
 func (c *compiler) compileExpr(expr syntax.Expr) {
@@ -122,7 +146,7 @@ func (c *compiler) compileBasicLit(expr syntax.Expr) {
 	}
 
 	loadInstr.Value = value
-	code = append(code, loadInstr)
+	c.code = append(c.code, loadInstr)
 }
 
 func (c *compiler) compileName(expr syntax.Expr) {
@@ -130,12 +154,17 @@ func (c *compiler) compileName(expr syntax.Expr) {
 	loadRefInstr := &InstrLoadRef{
 		RefName: name.Value,
 	}
-	code = append(code, loadRefInstr)
+	c.code = append(c.code, loadRefInstr)
 }
 
 func (c *compiler) compileCall(expr syntax.Expr) {
-	call := expr.(*syntax.Call)
-	chunk := lookupChunk(call.CalleeName.Value, true, nil)
+	var (
+		chunk Chunk
+		call  = expr.(*syntax.Call)
+	)
+
+	chunk = lookupChunk(call.CalleeName.Value, true, nil)
+
 	callInstr := &InstrCall{
 		FuncName: call.CalleeName.Value,
 	}
@@ -149,7 +178,7 @@ func (c *compiler) compileCall(expr syntax.Expr) {
 		callInstr.ArgNames[i] = k
 	}
 
-	code = append(code, callInstr)
+	c.code = append(c.code, callInstr)
 }
 
 func (c *compiler) compileOperation(expr syntax.Expr) {
@@ -161,28 +190,28 @@ func (c *compiler) compileOperation(expr syntax.Expr) {
 		// TODO(threadedstream): handle an error
 		panic("")
 	case syntax.Plus:
-		code = append(code, &InstrAdd{})
+		c.code = append(c.code, &InstrAdd{})
 	case syntax.Minus:
-		code = append(code, &InstrSub{})
+		c.code = append(c.code, &InstrSub{})
 	case syntax.Mul:
-		code = append(code, &InstrMul{})
+		c.code = append(c.code, &InstrMul{})
 	case syntax.Div:
-		code = append(code, &InstrDiv{})
+		c.code = append(c.code, &InstrDiv{})
 	case syntax.GreaterThan:
-		code = append(code, &InstrGreaterThan{})
+		c.code = append(c.code, &InstrGreaterThan{})
 	case syntax.GreaterThanOrEqual:
-		code = append(code, &InstrGreaterThanOrEqual{})
+		c.code = append(c.code, &InstrGreaterThanOrEqual{})
 	case syntax.LessThan:
-		code = append(code, &InstrLessThan{})
+		c.code = append(c.code, &InstrLessThan{})
 	case syntax.LessThanOrEqual:
-		code = append(code, &InstrLessThanOrEqual{})
+		c.code = append(c.code, &InstrLessThanOrEqual{})
 	case syntax.Equal:
-		code = append(code, &InstrEqual{})
+		c.code = append(c.code, &InstrEqual{})
 	}
 }
 
 func (c *compiler) compileReturnStmt(stmt syntax.Stmt) {
 	returnStmt := stmt.(*syntax.ReturnStmt)
 	c.compileExpr(returnStmt.Value)
-	code = append(code, &InstrReturn{})
+	c.code = append(c.code, &InstrReturn{})
 }

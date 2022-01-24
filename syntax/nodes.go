@@ -66,12 +66,6 @@ type (
 		Type Expr
 	}
 
-	Call struct {
-		CalleeName *Name
-		ArgList    []Expr
-		expr
-	}
-
 	Name struct {
 		Value string
 		expr
@@ -87,6 +81,10 @@ type (
 		Node
 	}
 
+	ErrStmt struct {
+		stmt
+	}
+
 	// { Stmts }
 	BlockStmt struct {
 		Stmts []Stmt
@@ -97,6 +95,12 @@ type (
 	WhileStmt struct {
 		Cond Operation
 		Body *BlockStmt
+		stmt
+	}
+
+	Call struct {
+		CalleeName *Name
+		ArgList    []Expr
 		stmt
 	}
 

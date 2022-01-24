@@ -153,7 +153,7 @@ func (v Value) IsUndefined() bool {
 
 // add(x, y Value)
 
-func Add(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
+func Add(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
 	if ctx == TreeWalkInterpreter {
 		if v1.ValueType == Ref {
 			v1, _ = Lookup(v1.AsString(), localEnv, true)
@@ -182,7 +182,7 @@ func Add(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
 	}
 }
 
-func Sub(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
+func Sub(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
 	if ctx == TreeWalkInterpreter {
 		if v1.ValueType == Ref {
 			v1, _ = Lookup(v1.AsString(), localEnv, true)
@@ -206,7 +206,7 @@ func Sub(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
 	}
 }
 
-func Mul(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
+func Mul(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
 	if ctx == TreeWalkInterpreter {
 		if v1.ValueType == Ref {
 			v1, _ = Lookup(v1.AsString(), localEnv, true)
@@ -230,7 +230,7 @@ func Mul(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
 	}
 }
 
-func Div(v1, v2 Value, localEnv Environment, ctx ExecutionContext) Value {
+func Div(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
 	if ctx == TreeWalkInterpreter {
 		if v1.ValueType == Ref {
 			v1, _ = Lookup(v1.AsString(), localEnv, true)

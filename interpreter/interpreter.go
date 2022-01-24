@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func checkOpValues(op syntax.Operator, v1, v2 backing.Value, localEnv backing.Environment) {
+func checkOpValues(op syntax.Operator, v1, v2 backing.Value, localEnv backing.ValueEnvironment) {
 
 	if v1.ValueType == backing.Ref {
 		v1, _ = backing.Lookup(v1.AsString(), localEnv, true)
@@ -76,21 +76,21 @@ func unwrapValue(value backing.Value) interface{} {
 	}
 }
 
-func callPrintFunc(call *syntax.Call, localEnv backing.Environment) {
+func callPrintFunc(call *syntax.Call, localEnv backing.ValueEnvironment) {
 	// TODO(threadedstream): allow more arguments to print
 	assert.Assert(len(call.ArgList) == 1, "expected a single argument for print got %d", len(call.ArgList))
 	value := unwrapValue(visitExpr(call.ArgList[0], localEnv))
 	fmt.Printf("%v", value)
 }
 
-func dispatchReservedCall(call *syntax.Call, localEnv backing.Environment) {
+func dispatchReservedCall(call *syntax.Call, localEnv backing.ValueEnvironment) {
 	switch call.CalleeName.Value {
 	case "print":
 		callPrintFunc(call, localEnv)
 	}
 }
 
-func checkAssignmentValidity(name string, localEnv backing.Environment) error {
+func checkAssignmentValidity(name string, localEnv backing.ValueEnvironment) error {
 	// first, check against the presence of backing associated with name
 	value, _ := backing.Lookup(name, localEnv, true)
 
@@ -102,7 +102,7 @@ func checkAssignmentValidity(name string, localEnv backing.Environment) error {
 	return nil
 }
 
-func resolveRef(v1 backing.Value, localEnv backing.Environment) backing.Value {
+func resolveRef(v1 backing.Value, localEnv backing.ValueEnvironment) backing.Value {
 	switch {
 	default:
 		return v1
@@ -112,7 +112,7 @@ func resolveRef(v1 backing.Value, localEnv backing.Environment) backing.Value {
 	}
 }
 
-func isCondTrue(cond syntax.Operation, localEnv backing.Environment) bool {
+func isCondTrue(cond syntax.Operation, localEnv backing.ValueEnvironment) bool {
 	syntax.IsComparisonOp(cond.Op)
 	var (
 		lhs = visitExpr(cond.Lhs, localEnv)
@@ -174,7 +174,7 @@ func DumpEnvState() {
 	//environment.state()
 }
 
-func visitStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	switch stmt.(type) {
 	default:
 		// we don't allow it in perspective. Right now, we're totally good with that
@@ -196,10 +196,12 @@ func visitStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
 		return visitDefDeclStmt(stmt, localEnv)
 	case *syntax.ReturnStmt:
 		return visitReturnStmt(stmt, localEnv)
+	case *syntax.Call:
+		return visitCall(stmt, localEnv)
 	}
 }
 
-func visitExpr(expr syntax.Expr, localEnv backing.Environment) backing.Value {
+func visitExpr(expr syntax.Expr, localEnv backing.ValueEnvironment) backing.Value {
 	switch expr.(type) {
 	default:
 		return backing.Value{Value: nil}
@@ -209,8 +211,6 @@ func visitExpr(expr syntax.Expr, localEnv backing.Environment) backing.Value {
 		return visitBasicLit(expr)
 	case *syntax.Operation:
 		return visitOperation(expr, localEnv)
-	case *syntax.Call:
-		return visitCall(expr, localEnv)
 	}
 }
 
@@ -244,7 +244,7 @@ func visitBasicLit(expr syntax.Expr) backing.Value {
 	return v
 }
 
-func visitOperation(expr syntax.Expr, localEnv backing.Environment) backing.Value {
+func visitOperation(expr syntax.Expr, localEnv backing.ValueEnvironment) backing.Value {
 	operation := expr.(*syntax.Operation)
 	lhsValue := visitExpr(operation.Lhs, localEnv)
 	rhsValue := visitExpr(operation.Rhs, localEnv)
@@ -270,7 +270,7 @@ func visitOperation(expr syntax.Expr, localEnv backing.Environment) backing.Valu
 	}
 }
 
-func visitCall(expr syntax.Expr, localEnv backing.Environment) backing.Value {
+func visitCall(expr syntax.Expr, localEnv backing.ValueEnvironment) backing.Value {
 	call := expr.(*syntax.Call)
 
 	if isReservedFuncCall(call.CalleeName.Value) {
@@ -282,7 +282,7 @@ func visitCall(expr syntax.Expr, localEnv backing.Environment) backing.Value {
 	value, _ := backing.Lookup(call.CalleeName.Value, nil, true)
 	defValue := value.AsFunction()
 
-	var funcFrame = make(backing.Environment)
+	var funcFrame = make(backing.ValueEnvironment)
 	// TODO(threadedstream): do some checks regarding the number of passed arguments
 	for idx, arg := range call.ArgList {
 		argValue := visitExpr(arg, localEnv)
@@ -300,7 +300,7 @@ func visitCall(expr syntax.Expr, localEnv backing.Environment) backing.Value {
 	return returnValue
 }
 
-func visitReturnStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitReturnStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	returnStmt := stmt.(*syntax.ReturnStmt)
 	returnValue := visitExpr(returnStmt.Value, localEnv)
 	returnValue.Returned = true
@@ -308,7 +308,7 @@ func visitReturnStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Val
 }
 
 // statements
-func visitVarDeclStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitVarDeclStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	varDecl := stmt.(*syntax.VarDeclStmt)
 	value := visitExpr(varDecl.Rhs, localEnv)
 	value.Immutable = false
@@ -316,7 +316,7 @@ func visitVarDeclStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Va
 	return backing.Value{}
 }
 
-func visitValDeclStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitValDeclStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	valDecl := stmt.(*syntax.ValDeclStmt)
 	value := visitExpr(valDecl.Rhs, localEnv)
 	value.Immutable = true
@@ -324,7 +324,7 @@ func visitValDeclStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Va
 	return backing.Value{}
 }
 
-func visitBlockStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitBlockStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	var (
 		block = stmt.(*syntax.BlockStmt)
 		value backing.Value
@@ -340,7 +340,7 @@ func visitBlockStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Valu
 	return value
 }
 
-func visitIfStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitIfStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	var (
 		value  = backing.Value{ValueType: backing.Null}
 		ifStmt = stmt.(*syntax.IfStmt)
@@ -357,7 +357,7 @@ func visitIfStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
 	return value
 }
 
-func visitWhileStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitWhileStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	var whileStmt = stmt.(*syntax.WhileStmt)
 	for isCondTrue(whileStmt.Cond, localEnv) {
 		visitStmt(whileStmt.Body, localEnv)
@@ -365,7 +365,7 @@ func visitWhileStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Valu
 	return backing.Value{}
 }
 
-func visitAssignment(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitAssignment(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	assignment := stmt.(*syntax.Assignment)
 	lhsValue := visitExpr(assignment.Lhs, localEnv)
 	if lhsValue.ValueType != backing.Ref {
@@ -379,7 +379,7 @@ func visitAssignment(stmt syntax.Stmt, localEnv backing.Environment) backing.Val
 	return backing.Value{}
 }
 
-func visitDefDeclStmt(stmt syntax.Stmt, localEnv backing.Environment) backing.Value {
+func visitDefDeclStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
 	var (
 		defDeclStmt = stmt.(*syntax.DefDeclStmt)
 		returnType  = visitExpr(defDeclStmt.ReturnType, localEnv)

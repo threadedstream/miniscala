@@ -61,10 +61,10 @@ func (cs *CharScanner) tokenize() Token {
 	switch cs.s.Peek() {
 	default:
 		peekChar := cs.s.Peek()
-		if isAlphaNum(peekChar) {
+		if isAlphaNum(peekChar) || isSpecialSymbol(peekChar) {
 			pos := cs.s.Pos()
 			var tokenValue []rune
-			for isAlphaNum(cs.s.Peek()) {
+			for isAlphaNum(cs.s.Peek()) || isSpecialSymbol(cs.s.Peek()) {
 				tokenValue = append(tokenValue, cs.s.Peek())
 				cs.s.Next()
 			}
@@ -338,4 +338,13 @@ func isCondOp(op string) bool {
 
 func isAlphaNum(c rune) bool {
 	return unicode.IsLetter(c) || unicode.IsDigit(c)
+}
+
+func isSpecialSymbol(c rune) bool {
+	switch c {
+	default:
+		return false
+	case '_', '-', '$':
+		return true
+	}
 }

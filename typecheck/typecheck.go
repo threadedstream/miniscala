@@ -1,3 +1,3 @@
 package typecheck
 
-// TODO(threadedstream): breathe in some life into (yet unlearned) typechecking machinery
+// TODO(threadedstream): breathe some life into (yet unlearned) typechecking machinery

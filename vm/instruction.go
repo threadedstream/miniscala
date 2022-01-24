@@ -77,9 +77,16 @@ type (
 		instr
 	}
 
+	InstrSetLocal struct {
+		LocalName  string
+		StoringCtx backing.StoringContext
+		Immutable  bool
+		instr
+	}
+
 	InstrCall struct {
 		FuncName string
-		ArgNames [256]string
+		ArgNames []string
 		instr
 	}
 

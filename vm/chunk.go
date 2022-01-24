@@ -12,7 +12,8 @@ var (
 type Chunk struct {
 	funcName    string
 	instrStream []Instruction
-	localValues map[string]backing.Value
+	localValues backing.ValueEnvironment
+	doesReturn  bool
 }
 
 func newChunk(code []Instruction, name string) Chunk {

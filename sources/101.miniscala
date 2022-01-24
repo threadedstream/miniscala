@@ -1,57 +1,23 @@
-
-// this is a factorial function
-def fac(x: Int): Int{
+def dummy_func(x: Int): Unit {
+    // LOADREF X
+    // LOADI 0
+    // GREATER_THAN
+    // JMP_IF_FALSE 7
     // LOADREF x
-    // LOADI 1
-    // EQUAL
-    // JMP_IF_FALSE 2
-    // LOADI 1
-    // RETURN
-    // LOADREF x
+    // CALL PRINT
     // LOADREF x
     // LOADI 1
     // SUB
-    // CALL fac
-    // MUL
+    // SET_LOCAL x
+    // JMP -7
     // RETURN
-    if (x == 1) {
-        return 1
+    while (x > 0) {
+        print(x)
+        x = x - 1
     }
-    return x * fac(x - 1)
-}
-
-// this is a fibonacci function
-def fib(n: Int): Int {
-    // LOADREF n
-    // LOADI 1
-    // LESS_THAN_OR_EQ
-    // JMP_IF_FALSE 2
-    // LOADI 1
-    // RETURN
-    // LOADREF n
-    // LOADI 1
-    // SUB
-    // CALL fib
-    // LOADREF n
-    // LOADI 2
-    // SUB
-    // CALL fib
-    // ADD
-    // RETURN
-    if (n <= 1) {
-        return 1
-    }
-
-    return fib(n - 1) + fib(n - 2)
 }
 
 def main(): Unit {
-    // LOADI 5
-    // CALL fib
-    // CALL fac
-    // CALL print
-    // RETURN
-    print(fac(fib(5)))
+    val y = 5
+    dummy_func(y)
 }
-
-

@@ -56,7 +56,7 @@ func (p *Parser) consume(token Token) {
 		errPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected %s but got %s",
+			fmt:  "[%d:%d] expected %s but got %s\n",
 			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr()), tokToString(token)},
 		})
 	}
@@ -102,13 +102,34 @@ func (p *Parser) stmt() Stmt {
 		return p.defDeclStmt()
 	case *TokenReturn:
 		return p.returnStmt()
-	default:
-		if (reflect.TypeOf(p.curr()) == reflect.TypeOf(&TokenIdent{})) &&
-			(reflect.TypeOf(p.peek()) == reflect.TypeOf(&TokenAssign{})) {
+	case *TokenIdent:
+		// handling simple statements
+		switch p.peek().(type) {
+		// definitely a call
+		case *TokenOpenParen:
+			return p.call()
+		// definitely an assignment
+		case *TokenAssign:
 			return p.assignment()
-		} else {
-			return p.expr()
+		default:
+			errPos := p.curr().Pos()
+			p.hadErrors = true
+			p.errors = append(p.errors, syntaxerror{
+				fmt:  "[%d:%d] expected a '(' or '=' but got %s\n",
+				args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
+			})
+			p.next()
+			return &ErrStmt{}
 		}
+	default:
+		errPos := p.curr().Pos()
+		p.hadErrors = true
+		p.errors = append(p.errors, syntaxerror{
+			fmt:  "[%d:%d] expected a statement but got %s\n",
+			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
+		})
+		p.next()
+		return &ErrStmt{}
 	}
 }
 
@@ -152,9 +173,10 @@ func (p *Parser) atom() Node {
 		errPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] unknown node in atom()",
+			fmt:  "[%d:%d] unknown node in atom()\n",
 			args: []interface{}{errPos.Line, errPos.Column},
 		})
+		p.next()
 		return &ErrExpr{}
 	}
 }
@@ -178,10 +200,11 @@ func (p *Parser) valDeclStmt() *ValDeclStmt {
 		errPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected TokenIdent, but got %s",
+			fmt:  "[%d:%d] expected TokenIdent, but got %s\n",
 			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
 		})
-		return nil
+		p.next()
+		return &ValDeclStmt{}
 	}
 	tokenIdent := p.curr().(*TokenIdent)
 	valDeclStmt.Name = Name{Value: tokenIdent.value}
@@ -199,10 +222,11 @@ func (p *Parser) varDeclStmt() *VarDeclStmt {
 		errPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected TokenIdent, but got %s",
+			fmt:  "[%d:%d] expected TokenIdent, but got %s\n",
 			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
 		})
-		return nil
+		p.next()
+		return &VarDeclStmt{}
 	}
 	tokenIdent := p.curr().(*TokenIdent)
 	varDeclStmt.Name = Name{Value: tokenIdent.value}
@@ -223,10 +247,11 @@ func (p *Parser) defDeclStmt() *DefDeclStmt {
 		errPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected name of the function, but got %s",
+			fmt:  "[%d:%d] expected name of the function, but got %s\n",
 			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
 		})
-		return nil
+		p.next()
+		return &DefDeclStmt{}
 	}
 	tokenIdent := p.curr().(*TokenIdent)
 	defDeclStmt.Name = &Name{Value: tokenIdent.value}
@@ -276,20 +301,22 @@ parseReturnType:
 		errPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected a specification of return type, but got %s",
+			fmt:  "[%d:%d] expected a specification of return type, but got %s\n",
 			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
 		})
-		return nil
+		p.next()
+		return &DefDeclStmt{}
 	}
 	p.next()
 	if !p.match(&TokenIdent{}) {
 		errPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected a type name, but got %s",
+			fmt:  "[%d:%d] expected a type name, but got %s\n",
 			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
 		})
-		return nil
+		p.next()
+		return &DefDeclStmt{}
 	}
 	defDeclStmt.ReturnType = p.expr()
 	defDeclStmt.Body = p.blockStmt()
@@ -358,7 +385,7 @@ func (p *Parser) cond() Operation {
 		errorPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected operator, got %s",
+			fmt:  "[%d:%d] expected operator, got %s\n",
 			args: []interface{}{errorPos.Line, errorPos.Column, tokToString(p.curr())},
 		})
 		return Operation{}
@@ -376,7 +403,7 @@ func (p *Parser) assignment() *Assignment {
 		errorPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected TokenIdent, but got %s",
+			fmt:  "[%d:%d] expected TokenIdent, but got %s\n",
 			args: []interface{}{errorPos.Line, errorPos.Column, tokToString(p.curr())},
 		})
 		return nil
@@ -430,9 +457,10 @@ func (p *Parser) expr() Node {
 		errPos := p.curr().Pos()
 		p.hadErrors = true
 		p.errors = append(p.errors, syntaxerror{
-			fmt:  "[%d:%d] expected TokenNumber, TokenOpenParen, TokenOpenBrace, TokenIdent, TokenVal, TokenVar, but got %s",
+			fmt:  "[%d:%d] expected number, '(' , '{' , identifier, val, or var, but got %s\n",
 			args: []interface{}{errPos.Line, errPos.Column, tokToString(p.curr())},
 		})
+		p.next()
 		return &ErrExpr{}
 	}
 }

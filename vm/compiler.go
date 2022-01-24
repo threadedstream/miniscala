@@ -58,10 +58,20 @@ func (c *compiler) compileStmt(stmt syntax.Stmt) {
 		c.compileBlockStmt(stmt)
 	case *syntax.IfStmt:
 		c.compileIfStmt(stmt)
+	case *syntax.WhileStmt:
+		c.compileWhileStmt(stmt)
 	case *syntax.ReturnStmt:
 		c.compileReturnStmt(stmt)
 	case *syntax.DefDeclStmt:
 		c.compileDefDeclStmt(stmt)
+	case *syntax.Call:
+		c.compileCall(stmt)
+	case *syntax.Assignment:
+		c.compileAssignment(stmt)
+	case *syntax.VarDeclStmt:
+		c.compileVarDeclStmt(stmt)
+	case *syntax.ValDeclStmt:
+		c.compileValDeclStmt(stmt)
 	}
 }
 
@@ -70,6 +80,25 @@ func (c *compiler) compileBlockStmt(stmt syntax.Stmt) {
 	for _, currStmt := range block.Stmts {
 		c.compileStmt(currStmt)
 	}
+}
+
+func (c *compiler) compileValDeclStmt(stmt syntax.Stmt) {
+	valDeclStmt := stmt.(*syntax.ValDeclStmt)
+	c.compileExpr(valDeclStmt.Rhs)
+	c.code = append(c.code, &InstrSetLocal{
+		LocalName:  valDeclStmt.Name.Value,
+		StoringCtx: backing.Declare,
+		Immutable:  true,
+	})
+}
+
+func (c *compiler) compileVarDeclStmt(stmt syntax.Stmt) {
+	varDeclStmt := stmt.(*syntax.VarDeclStmt)
+	c.compileExpr(varDeclStmt.Rhs)
+	c.code = append(c.code, &InstrSetLocal{
+		LocalName:  varDeclStmt.Name.Value,
+		StoringCtx: backing.Declare,
+	})
 }
 
 func (c *compiler) compileIfStmt(stmt syntax.Stmt) {
@@ -83,6 +112,33 @@ func (c *compiler) compileIfStmt(stmt syntax.Stmt) {
 	jmpIfFalseInstr.Offset = posteriorCodeLen - priorCodeLen
 }
 
+func (c *compiler) compileAssignment(stmt syntax.Stmt) {
+	assignment := stmt.(*syntax.Assignment)
+	c.compileExpr(assignment.Rhs)
+	// dirty little hack, not encouraged, by any means, in industry-strength compilers
+	lhs := assignment.Lhs.(*syntax.Name)
+	setLocalInstr := &InstrSetLocal{
+		LocalName:  lhs.Value,
+		StoringCtx: backing.Assign,
+	}
+	c.code = append(c.code, setLocalInstr)
+}
+
+func (c *compiler) compileWhileStmt(stmt syntax.Stmt) {
+	whileStmt := stmt.(*syntax.WhileStmt)
+	unCondJmpInit := len(c.code)
+	c.compileExpr(&whileStmt.Cond)
+	jmpIfFalseInstr := &InstrJmpIfFalse{}
+	c.code = append(c.code, jmpIfFalseInstr)
+	priorCodeLen := len(c.code)
+	c.compileBlockStmt(whileStmt.Body)
+	jmpInstr := &InstrJmp{}
+	c.code = append(c.code, jmpInstr)
+	posteriorCodeLen := len(c.code)
+	jmpIfFalseInstr.Offset = posteriorCodeLen - priorCodeLen
+	jmpInstr.Offset = unCondJmpInit - posteriorCodeLen
+}
+
 func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 	defStmt := stmt.(*syntax.DefDeclStmt)
 	chunk := newChunk(nil, defStmt.Name.Value)
@@ -90,6 +146,7 @@ func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 		chunk.localValues[param.Name.Value] = backing.NullValue()
 	}
 
+	chunk.doesReturn = defStmt.ReturnType.(*syntax.Name).Value != "Unit"
 	chunkStore[defStmt.Name.Value] = chunk
 	c.compileBlockStmt(defStmt.Body)
 	switch c.code[len(c.code)-1].(type) {
@@ -121,8 +178,6 @@ func (c *compiler) compileExpr(expr syntax.Expr) {
 		c.compileName(expr)
 	case *syntax.Operation:
 		c.compileOperation(expr)
-	case *syntax.Call:
-		c.compileCall(expr)
 	}
 }
 
@@ -173,9 +228,8 @@ func (c *compiler) compileCall(expr syntax.Expr) {
 		c.compileExpr(arg)
 	}
 
-	i := 0
 	for k, _ := range chunk.localValues {
-		callInstr.ArgNames[i] = k
+		callInstr.ArgNames = append(callInstr.ArgNames, k)
 	}
 
 	c.code = append(c.code, callInstr)

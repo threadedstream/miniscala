@@ -106,45 +106,87 @@ func (vm *VM) Run() {
 			vm.push(load.Value)
 		case *InstrLoadRef:
 			loadArg := vm.chunk.instrStream[oldIp].(*InstrLoadRef)
+			// TODO(threadedstream): replace with a call to backing.Lookup
 			vm.push(vm.chunk.localValues[loadArg.RefName])
 		case *InstrGreaterThan:
+			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			boolValue := backing.Value{
-				Value:     firstOperand.AsFloat() > secondOperand.AsFloat(),
-				ValueType: backing.Bool,
+			if firstOperand.IsString() && secondOperand.IsString() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsString() > secondOperand.AsString(),
+					ValueType: backing.Bool,
+				}
+			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() > secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
 			}
 			vm.push(boolValue)
 		case *InstrLessThan:
+			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			boolValue := backing.Value{
-				Value:     firstOperand.AsFloat() < secondOperand.AsFloat(),
-				ValueType: backing.Bool,
+			if firstOperand.IsString() && secondOperand.IsString() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsString() < secondOperand.AsString(),
+					ValueType: backing.Bool,
+				}
+			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() < secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
 			}
 			vm.push(boolValue)
 		case *InstrGreaterThanOrEqual:
+			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			boolValue := backing.Value{
-				Value:     firstOperand.AsFloat() >= secondOperand.AsFloat(),
-				ValueType: backing.Bool,
+			if firstOperand.IsString() && secondOperand.IsString() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsString() >= secondOperand.AsString(),
+					ValueType: backing.Bool,
+				}
+			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() >= secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
 			}
 			vm.push(boolValue)
 		case *InstrLessThanOrEqual:
+			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			boolValue := backing.Value{
-				Value:     firstOperand.AsFloat() <= secondOperand.AsFloat(),
-				ValueType: backing.Bool,
+			if firstOperand.IsString() && secondOperand.IsString() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsString() <= secondOperand.AsString(),
+					ValueType: backing.Bool,
+				}
+			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() <= secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
 			}
 			vm.push(boolValue)
 		case *InstrEqual:
+			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			boolValue := backing.Value{
-				Value:     firstOperand.AsFloat() == secondOperand.AsFloat(),
-				ValueType: backing.Bool,
+
+			if firstOperand.IsString() && secondOperand.IsString() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsString() == secondOperand.AsString(),
+					ValueType: backing.Bool,
+				}
+			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() == secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
 			}
 			vm.push(boolValue)
 		case *InstrTrue:
@@ -166,7 +208,7 @@ func (vm *VM) Run() {
 			vm.push(nullValue)
 		case *InstrJmp:
 			jmp := vm.chunk.instrStream[oldIp].(*InstrJmp)
-			vm.ip = jmp.Offset
+			vm.ip += jmp.Offset
 		case *InstrJmpIfFalse:
 			jmpIfFalse := vm.chunk.instrStream[oldIp].(*InstrJmpIfFalse)
 			operand := vm.pop()
@@ -186,22 +228,30 @@ func (vm *VM) Run() {
 			}
 			vm.chunk = chunk
 			vm.nestingLevel++
-			vm.chunk.localValues = make(map[string]backing.Value)
+			vm.chunk.localValues = make(backing.ValueEnvironment)
 			vm.ip = 0
 			for i := 0; i < len(call.ArgNames); i++ {
 				value := vm.pop()
-				vm.chunk.localValues[call.ArgNames[i]] = value
+				backing.Store(call.ArgNames[i], value, vm.chunk.localValues, backing.Assign)
 			}
 		case *InstrReturn:
+			var returnValue backing.Value
 			if vm.nestingLevel <= 0 {
 				vm.normalexit()
 			}
 			vm.callChain[vm.nestingLevel] = ChainEntry{}
 			vm.nestingLevel--
-			returnValue := vm.pop()
+			if vm.chunk.doesReturn {
+				returnValue = vm.pop()
+				vm.push(returnValue)
+			}
 			vm.chunk = vm.callChain[vm.nestingLevel].chunk
 			vm.ip = vm.callChain[vm.nestingLevel].ip
-			vm.push(returnValue)
+		case *InstrSetLocal:
+			setLocalInstr := vm.chunk.instrStream[oldIp].(*InstrSetLocal)
+			valueToAssign := vm.pop()
+			valueToAssign.Immutable = setLocalInstr.Immutable
+			backing.Store(setLocalInstr.LocalName, valueToAssign, vm.chunk.localValues, setLocalInstr.StoringCtx)
 		}
 	}
 }

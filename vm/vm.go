@@ -228,7 +228,6 @@ func (vm *VM) Run() {
 			}
 			vm.chunk = chunk
 			vm.nestingLevel++
-			vm.chunk.localValues = make(backing.ValueEnvironment)
 			vm.ip = 0
 			for i := 0; i < len(call.ArgNames); i++ {
 				value := vm.pop()

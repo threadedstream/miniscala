@@ -19,7 +19,7 @@ type Chunk struct {
 func newChunk(code []Instruction, name string) Chunk {
 	chunk := Chunk{}
 	chunk.instrStream = code
-	chunk.localValues = make(map[string]backing.Value)
+	chunk.localValues = make(backing.ValueEnvironment)
 	chunk.funcName = name
 	return chunk
 }

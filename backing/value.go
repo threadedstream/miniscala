@@ -12,25 +12,10 @@ const (
 	Vm
 )
 
-type ValueType int
-
-const (
-	Float ValueType = iota
-	Int
-	String
-	Unit // void
-	Bool // add functionality for bool later on
-	Function
-	Ref
-	Null
-	Undefined
-)
-
 type (
 	Value struct {
 		Value     interface{}
 		ValueType ValueType
-		Immutable bool
 		Returned  bool
 	}
 
@@ -41,42 +26,6 @@ type (
 	}
 )
 
-func MiniscalaTypeToValueType(typ string) ValueType {
-	switch typ {
-	default:
-		return Undefined
-	case "Int", "Float":
-		return Float
-	case "String":
-		return String
-	case "Unit":
-		return Unit
-	case "Bool":
-		return Bool
-	}
-}
-
-func (v Value) ValueTypeToStr() string {
-	switch v.ValueType {
-	default:
-		return "VtUnknown"
-	case Float:
-		return "VtFloat"
-	case String:
-		return "VtString"
-	case Bool:
-		return "VtBool"
-	case Function:
-		return "VtFunction"
-	case Ref:
-		return "VtRef"
-	case Null:
-		return "VtNull"
-	case Undefined:
-		return "Undefined"
-	}
-}
-
 func NullValue() Value {
 	return Value{
 		ValueType: Null,
@@ -84,27 +33,27 @@ func NullValue() Value {
 }
 
 func (v Value) AsFloat() float64 {
-	assert.Assert(v.IsFloat(), "cannot cast value type %s to float", v.ValueTypeToStr())
+	assert.Assert(v.IsFloat(), "cannot cast value type %s to float", ValueTypeToStr(v.ValueType))
 	return v.Value.(float64)
 }
 
 func (v Value) AsInt() int {
-	assert.Assert(v.IsInt(), "cannot cast value type %s to int", v.ValueTypeToStr())
+	assert.Assert(v.IsInt(), "cannot cast value type %s to int", ValueTypeToStr(v.ValueType))
 	return v.Value.(int)
 }
 
 func (v Value) AsString() string {
-	assert.Assert(v.IsString() || v.IsRef(), "cannot cast value type %s to string", v.ValueTypeToStr())
+	assert.Assert(v.IsString() || v.IsRef(), "cannot cast value type %s to string", ValueTypeToStr(v.ValueType))
 	return v.Value.(string)
 }
 
 func (v Value) AsBool() bool {
-	assert.Assert(v.IsBool(), "cannot cast value type %s to bool", v.ValueTypeToStr())
+	assert.Assert(v.IsBool(), "cannot cast value type %s to bool", ValueTypeToStr(v.ValueType))
 	return v.Value.(bool)
 }
 
 func (v Value) AsFunction() *DefValue {
-	assert.Assert(v.IsFunction(), "cannot cast value type %s to function", v.ValueTypeToStr())
+	assert.Assert(v.IsFunction(), "cannot cast value type %s to function", ValueTypeToStr(v.ValueType))
 	return v.Value.(*DefValue)
 }
 
@@ -151,15 +100,13 @@ func (v Value) IsUndefined() bool {
 	return v.ValueType == Undefined
 }
 
-// add(x, y Value)
-
-func Add(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
+func Add(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 	if ctx == TreeWalkInterpreter {
 		if v1.ValueType == Ref {
-			v1, _ = Lookup(v1.AsString(), localEnv, true)
+			v1, _ = LookupValue(v1.AsString(), localEnv, true)
 		}
 		if v2.ValueType == Ref {
-			v2, _ = Lookup(v2.AsString(), localEnv, true)
+			v2, _ = LookupValue(v2.AsString(), localEnv, true)
 		}
 	}
 
@@ -182,13 +129,13 @@ func Add(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
 	}
 }
 
-func Sub(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
+func Sub(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 	if ctx == TreeWalkInterpreter {
 		if v1.ValueType == Ref {
-			v1, _ = Lookup(v1.AsString(), localEnv, true)
+			v1, _ = LookupValue(v1.AsString(), localEnv, true)
 		}
 		if v2.ValueType == Ref {
-			v2, _ = Lookup(v2.AsString(), localEnv, true)
+			v2, _ = LookupValue(v2.AsString(), localEnv, true)
 		}
 	}
 
@@ -206,13 +153,13 @@ func Sub(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
 	}
 }
 
-func Mul(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
+func Mul(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 	if ctx == TreeWalkInterpreter {
 		if v1.ValueType == Ref {
-			v1, _ = Lookup(v1.AsString(), localEnv, true)
+			v1, _ = LookupValue(v1.AsString(), localEnv, true)
 		}
 		if v2.ValueType == Ref {
-			v2, _ = Lookup(v2.AsString(), localEnv, true)
+			v2, _ = LookupValue(v2.AsString(), localEnv, true)
 		}
 	}
 
@@ -230,13 +177,13 @@ func Mul(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
 	}
 }
 
-func Div(v1, v2 Value, localEnv ValueEnvironment, ctx ExecutionContext) Value {
+func Div(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 	if ctx == TreeWalkInterpreter {
 		if v1.ValueType == Ref {
-			v1, _ = Lookup(v1.AsString(), localEnv, true)
+			v1, _ = LookupValue(v1.AsString(), localEnv, true)
 		}
 		if v2.ValueType == Ref {
-			v2, _ = Lookup(v2.AsString(), localEnv, true)
+			v2, _ = LookupValue(v2.AsString(), localEnv, true)
 		}
 	}
 

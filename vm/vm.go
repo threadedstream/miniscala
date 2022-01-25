@@ -202,10 +202,7 @@ func (vm *VM) Run() {
 			}
 			vm.push(boolValue)
 		case *InstrNull:
-			nullValue := backing.Value{
-				ValueType: backing.Null,
-			}
-			vm.push(nullValue)
+			vm.push(backing.NullValue())
 		case *InstrJmp:
 			jmp := vm.chunk.instrStream[oldIp].(*InstrJmp)
 			vm.ip += jmp.Offset
@@ -231,7 +228,7 @@ func (vm *VM) Run() {
 			vm.ip = 0
 			for i := 0; i < len(call.ArgNames); i++ {
 				value := vm.pop()
-				backing.Store(call.ArgNames[i], value, vm.chunk.localValues, backing.Assign)
+				backing.StoreValue(call.ArgNames[i], value, vm.chunk.localValues, nil, backing.Assign)
 			}
 		case *InstrReturn:
 			var returnValue backing.Value
@@ -249,8 +246,9 @@ func (vm *VM) Run() {
 		case *InstrSetLocal:
 			setLocalInstr := vm.chunk.instrStream[oldIp].(*InstrSetLocal)
 			valueToAssign := vm.pop()
-			valueToAssign.Immutable = setLocalInstr.Immutable
-			backing.Store(setLocalInstr.LocalName, valueToAssign, vm.chunk.localValues, setLocalInstr.StoringCtx)
+			valueType := backing.MiniscalaTypeToValueType(setLocalInstr.Type)
+			backing.StoreType(setLocalInstr.Name, valueType, setLocalInstr.Immutable, vm.chunk.localValueTypes)
+			backing.StoreValue(setLocalInstr.Name, valueToAssign, vm.chunk.localValues, vm.chunk.localValueTypes, setLocalInstr.StoringCtx)
 		}
 	}
 }

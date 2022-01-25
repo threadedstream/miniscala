@@ -19,5 +19,6 @@ def dummy_func(x: Int): Unit {
 
 def main(): Unit {
     val y = 5
+    y = 30
     dummy_func(y)
 }

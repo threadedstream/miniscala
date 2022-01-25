@@ -64,6 +64,7 @@ type (
 	Field struct {
 		Name *Name
 		Type Expr
+		expr
 	}
 
 	Name struct {

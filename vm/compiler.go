@@ -86,7 +86,7 @@ func (c *compiler) compileValDeclStmt(stmt syntax.Stmt) {
 	valDeclStmt := stmt.(*syntax.ValDeclStmt)
 	c.compileExpr(valDeclStmt.Rhs)
 	c.code = append(c.code, &InstrSetLocal{
-		LocalName:  valDeclStmt.Name.Value,
+		Name:       valDeclStmt.Name.Value,
 		StoringCtx: backing.Declare,
 		Immutable:  true,
 	})
@@ -96,7 +96,7 @@ func (c *compiler) compileVarDeclStmt(stmt syntax.Stmt) {
 	varDeclStmt := stmt.(*syntax.VarDeclStmt)
 	c.compileExpr(varDeclStmt.Rhs)
 	c.code = append(c.code, &InstrSetLocal{
-		LocalName:  varDeclStmt.Name.Value,
+		Name:       varDeclStmt.Name.Value,
 		StoringCtx: backing.Declare,
 	})
 }
@@ -118,7 +118,7 @@ func (c *compiler) compileAssignment(stmt syntax.Stmt) {
 	// dirty little hack, not encouraged, by any means, in industry-strength compilers
 	lhs := assignment.Lhs.(*syntax.Name)
 	setLocalInstr := &InstrSetLocal{
-		LocalName:  lhs.Value,
+		Name:       lhs.Value,
 		StoringCtx: backing.Assign,
 	}
 	c.code = append(c.code, setLocalInstr)

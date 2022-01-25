@@ -78,7 +78,8 @@ type (
 	}
 
 	InstrSetLocal struct {
-		LocalName  string
+		Name       string
+		Type       string
 		StoringCtx backing.StoringContext
 		Immutable  bool
 		instr

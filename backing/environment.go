@@ -32,7 +32,7 @@ func StoreValue(name string, value Value, localValEnv ValueEnv, localTypeEnv Typ
 	if ctx == Declare {
 		_, ok := LookupValue(name, localValEnv, false)
 		if ok {
-			panic(fmt.Errorf("name %s has already got entry in an environment", name))
+			panic(fmt.Errorf("name %s has already got entry in a value env", name))
 		}
 	} else if ctx == Assign {
 		_, ok := LookupValue(name, localValEnv, false)
@@ -55,16 +55,18 @@ func StoreValue(name string, value Value, localValEnv ValueEnv, localTypeEnv Typ
 	}
 }
 
-func StoreType(name string, valueType ValueType, immutable bool, localEnv TypeEnv) {
+func StoreType(name string, valueType ValueType, immutable bool, paramTypes []ValueType, localEnv TypeEnv) {
 	if localEnv != nil {
 		localEnv[name] = TypeInfo{
-			Immutable: immutable,
-			ValueType: valueType,
+			Immutable:  immutable,
+			ValueType:  valueType,
+			ParamTypes: paramTypes,
 		}
 	} else {
 		typeEnv[name] = TypeInfo{
-			Immutable: immutable,
-			ValueType: valueType,
+			Immutable:  immutable,
+			ValueType:  valueType,
+			ParamTypes: paramTypes,
 		}
 	}
 }

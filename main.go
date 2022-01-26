@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/ThreadedStream/miniscala/syntax"
-	"github.com/ThreadedStream/miniscala/vm"
+	"github.com/ThreadedStream/miniscala/typecheck"
 	"io"
 	"log"
 	"os"
@@ -126,9 +126,11 @@ func main() {
 		return
 	}
 
-	execVm := vm.NewVM(program)
+	typecheck.Typecheck(program)
 
-	execVm.Run()
+	//execVm := vm.NewVM(program)
+	//
+	//execVm.Run()
 
 	//program := &syntax.Program{
 	//	StmtList: []syntax.Stmt{

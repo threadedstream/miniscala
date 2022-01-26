@@ -7,3 +7,9 @@ func Assert(cond bool, format string, args ...interface{}) {
 		panic(fmt.Errorf(format, args))
 	}
 }
+
+func AssertCallback(cond bool, callback func(string, ...interface{}), format string, args ...interface{}) {
+	if !cond {
+		callback(format, args)
+	}
+}

@@ -244,7 +244,7 @@ func visitBasicLit(expr syntax.Expr) backing.Value {
 	return v
 }
 
-func visitOperation(expr syntax.Expr, localEnv backing.ValueEnvironment) backing.Value {
+func visitOperation(expr syntax.Expr, localEnv backing.ValueEnv) backing.Value {
 	operation := expr.(*syntax.Operation)
 	lhsValue := visitExpr(operation.Lhs, localEnv)
 	rhsValue := visitExpr(operation.Rhs, localEnv)
@@ -270,7 +270,7 @@ func visitOperation(expr syntax.Expr, localEnv backing.ValueEnvironment) backing
 	}
 }
 
-func visitCall(expr syntax.Expr, localEnv backing.ValueEnvironment) backing.Value {
+func visitCall(expr syntax.Expr, localEnv backing.ValueEnv) backing.Value {
 	call := expr.(*syntax.Call)
 
 	if isReservedFuncCall(call.CalleeName.Value) {
@@ -279,15 +279,15 @@ func visitCall(expr syntax.Expr, localEnv backing.ValueEnvironment) backing.Valu
 		return backing.Value{}
 	}
 
-	value, _ := backing.Lookup(call.CalleeName.Value, nil, true)
+	value, _ := backing.LookupValue(call.CalleeName.Value, nil, true)
 	defValue := value.AsFunction()
 
-	var funcFrame = make(backing.ValueEnvironment)
+	var funcFrame = make(backing.ValueEnv)
 	// TODO(threadedstream): do some checks regarding the number of passed arguments
 	for idx, arg := range call.ArgList {
 		argValue := visitExpr(arg, localEnv)
 		paramName := defValue.DefDeclStmt.ParamList[idx].Name.Value
-		backing.Store(paramName, argValue, funcFrame, backing.Assign)
+		backing.StoreValue(paramName, argValue, funcFrame, backing.Assign)
 	}
 
 	returnValue := visitBlockStmt(defValue.DefDeclStmt.Body, funcFrame)
@@ -300,7 +300,7 @@ func visitCall(expr syntax.Expr, localEnv backing.ValueEnvironment) backing.Valu
 	return returnValue
 }
 
-func visitReturnStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
+func visitReturnStmt(stmt syntax.Stmt, localEnv backing.ValueEnv) backing.Value {
 	returnStmt := stmt.(*syntax.ReturnStmt)
 	returnValue := visitExpr(returnStmt.Value, localEnv)
 	returnValue.Returned = true
@@ -308,7 +308,7 @@ func visitReturnStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backin
 }
 
 // statements
-func visitVarDeclStmt(stmt syntax.Stmt, localEnv backing.ValueEnvironment) backing.Value {
+func visitVarDeclStmt(stmt syntax.Stmt, localEnv backing.ValueEnv) backing.Value {
 	varDecl := stmt.(*syntax.VarDeclStmt)
 	value := visitExpr(varDecl.Rhs, localEnv)
 	value.Immutable = false

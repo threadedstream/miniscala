@@ -398,7 +398,8 @@ func (p *Parser) cond() Operation {
 }
 
 func (p *Parser) assignment() *Assignment {
-	var assignment = &Assignment{}
+	assignment := new(Assignment)
+	assignment.node = node{pos: p.curr().Pos()}
 	if !p.match(&TokenIdent{}) {
 		errorPos := p.curr().Pos()
 		p.hadErrors = true

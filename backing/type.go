@@ -18,7 +18,8 @@ const (
 
 type TypeInfo struct {
 	ValueType
-	Immutable bool
+	Immutable  bool
+	ParamTypes []ValueType // for functions
 }
 
 func MiniscalaTypeToValueType(typ string) ValueType {

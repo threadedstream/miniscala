@@ -314,6 +314,11 @@ func (cs *CharScanner) tokenizeKeyword(kwd string) Token {
 	}
 }
 
+// used for external modules
+func IsKeyword(kwd string) bool {
+	return isKeyword(kwd)
+}
+
 func isKeyword(kwd string) bool {
 	switch kwd {
 	default:

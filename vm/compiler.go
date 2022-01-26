@@ -8,7 +8,7 @@ import (
 
 var (
 	// TODO(threadedstream): add more reserved functions
-	reservedFuncNames = []string{"print"}
+	reservedFuncNames = [...]string{"print"}
 )
 
 type compiler struct {

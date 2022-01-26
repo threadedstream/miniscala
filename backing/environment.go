@@ -91,17 +91,23 @@ func lookup(name string, localEnv interface{}, shouldPanic bool, lookupCtx Looku
 			ok  bool
 		)
 
-		// search for the backing in local environment first
-		val, ok = localEnv.(ValueEnv)[name]
-		if !ok {
-			// in case of failure, try seeking backing in the global one
-			val, ok = valueEnv[name]
-			if !ok {
-				if shouldPanic {
-					panic(fmt.Errorf("no value associated with name %s was found", name))
-				}
-				return NullValue(), false
+		localValEnv := localEnv.(ValueEnv)
+
+		if localValEnv != nil {
+			// search for the value in local environment first
+			val, ok = localValEnv[name]
+			if ok {
+				return val, true
 			}
+		}
+
+		// in case of failure, try seeking value in the global one
+		val, ok = valueEnv[name]
+		if !ok {
+			if shouldPanic {
+				panic(fmt.Errorf("no value associated with name %s was found", name))
+			}
+			return NullValue(), false
 		}
 
 		return val, true
@@ -112,16 +118,23 @@ func lookup(name string, localEnv interface{}, shouldPanic bool, lookupCtx Looku
 			ok       bool
 		)
 
-		typeInfo, ok = localEnv.(TypeEnv)[name]
+		localTypeEnv := localEnv.(TypeEnv)
+
+		if localTypeEnv != nil {
+			typeInfo, ok = localTypeEnv[name]
+			if ok {
+				return typeInfo, true
+			}
+		}
+
+		typeInfo, ok = typeEnv[name]
 		if !ok {
-			typeInfo, ok = typeEnv[name]
-			if !ok {
-				if shouldPanic {
-					panic(fmt.Errorf("no type info associated with name %s was found", name))
-				}
+			if shouldPanic {
+				panic(fmt.Errorf("no type info associated with name %s was found", name))
 			}
 			return TypeInfo{}, false
 		}
+
 		return typeInfo, true
 	}
 }

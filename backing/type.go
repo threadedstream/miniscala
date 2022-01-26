@@ -12,6 +12,7 @@ const (
 	Bool
 	Function
 	Ref
+	Any
 	Null
 	Undefined
 )
@@ -52,6 +53,15 @@ func LitKindToValueType(kind syntax.LitKind) ValueType {
 	case syntax.BoolLit:
 		return Bool
 	}
+}
+
+func TypesEqual(t1, t2 ValueType) bool {
+	if t1 != Any && t2 != Any {
+		return t1 == t2
+	}
+	// ValueType::Any == (whatsoever ValueType was passed) evaluates to true
+	// Although I've got to make sure this scheme is suitable for each possible corner-case
+	return true
 }
 
 func ValueTypeToStr(valueType ValueType) string {

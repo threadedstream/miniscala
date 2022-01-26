@@ -16,6 +16,10 @@ type typecheckerror struct {
 var (
 	errors    []typecheckerror
 	hadErrors = false
+	// map from reserved functions' names to the type of their parameters
+	reservedFunctions = map[string][]backing.ValueType{
+		"print": {backing.Any},
+	}
 )
 
 func typecheckError(format string, args ...interface{}) {
@@ -28,12 +32,19 @@ func typecheckError(format string, args ...interface{}) {
 
 func Typecheck(program *syntax.Program) {
 	assert.Assert(program != nil, "program is nil!!!")
+	typifyReservedFunctions()
 	typecheckProgram(program)
 	if hadErrors {
 		for _, err := range errors {
-			fmt.Fprintf(os.Stderr, err.fmt, err.args)
+			fmt.Fprintf(os.Stderr, err.fmt, err.args...)
 		}
 		os.Exit(1)
+	}
+}
+
+func typifyReservedFunctions() {
+	for name, paramTypes := range reservedFunctions {
+		backing.StoreType(name, backing.Unit, true, paramTypes, nil)
 	}
 }
 
@@ -88,6 +99,8 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 			return backing.Undefined, false
 		case t1 == backing.Float && t2 == backing.Int:
 			return backing.Float, true
+		case t1 == backing.Int && t2 == backing.Float:
+			return backing.Float, true
 		case t1 == backing.Float && t2 == backing.Float:
 			return backing.Float, true
 		case t1 == backing.Int && t2 == backing.Int:
@@ -100,6 +113,8 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 		default:
 			return backing.Undefined, false
 		case t1 == backing.Float && t2 == backing.Int:
+			return backing.Float, true
+		case t1 == backing.Int && t2 == backing.Float:
 			return backing.Float, true
 		case t1 == backing.Float && t2 == backing.Float:
 			return backing.Float, true
@@ -114,6 +129,8 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 		default:
 			return backing.Undefined, false
 		case t1 == backing.Float && t2 == backing.Int:
+			return backing.Bool, true
+		case t1 == backing.Int && t2 == backing.Float:
 			return backing.Bool, true
 		case t1 == backing.Int && t2 == backing.Int:
 			return backing.Bool, true
@@ -146,7 +163,15 @@ func typecheckStmt(stmt syntax.Stmt, typeEnv backing.TypeEnv) {
 		typecheckWhileStmt(stmt, typeEnv)
 	case *syntax.Call:
 		typecheckCall(stmt, typeEnv)
+	case *syntax.BlockStmt:
+		typecheckBlockStmt(stmt, backing.Undefined, typeEnv)
+	case *syntax.Assignment:
+		typecheckAssignment(stmt, typeEnv)
 	}
+}
+
+func typecheckAssignment(stmt syntax.Stmt, typeEnv backing.TypeEnv) {
+	// TODO(threadedstream):
 }
 
 func typecheckCall(stmt syntax.Stmt, typeEnv backing.TypeEnv) {
@@ -169,7 +194,7 @@ func typecheckCall(stmt syntax.Stmt, typeEnv backing.TypeEnv) {
 	}
 
 	for idx, paramType := range calleeInfo.ParamTypes {
-		if paramType != valueTypes[idx] {
+		if !backing.TypesEqual(paramType, valueTypes[idx]) {
 			errorPos := callStmt.Pos()
 			typecheckError("[%d:%d] arg %d expected type %s, but %s was provided", errorPos.Line, errorPos.Column,
 				idx, backing.ValueTypeToStr(paramType), backing.ValueTypeToStr(valueTypes[idx]))
@@ -240,7 +265,7 @@ func typecheckDefDeclStmt(stmt syntax.Stmt) {
 	for _, param := range defDeclStmt.ParamList {
 		paramTypes = append(paramTypes, typecheckField(param, typeEnv))
 	}
-	backing.StoreType(defDeclStmt.Name.Value, backing.Function, true, nil, nil)
+	backing.StoreType(defDeclStmt.Name.Value, backing.Function, true, paramTypes, nil)
 	expectedReturnType := inferValueType(defDeclStmt.ReturnType, typeEnv)
 	typecheckBlockStmt(defDeclStmt.Body, expectedReturnType, typeEnv)
 }

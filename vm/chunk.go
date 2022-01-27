@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"github.com/ThreadedStream/miniscala/backing"
 	"runtime/debug"
 )
 
@@ -10,18 +9,14 @@ var (
 )
 
 type Chunk struct {
-	funcName        string
-	instrStream     []Instruction
-	localValues     backing.ValueEnv
-	localValueTypes backing.TypeEnv
-	doesReturn      bool
+	funcName    string
+	instrStream []Instruction
+	doesReturn  bool
 }
 
 func newChunk(code []Instruction, name string) Chunk {
 	chunk := Chunk{}
 	chunk.instrStream = code
-	chunk.localValues = make(backing.ValueEnv)
-	chunk.localValueTypes = make(backing.TypeEnv)
 	chunk.funcName = name
 	return chunk
 }

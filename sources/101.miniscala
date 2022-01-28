@@ -1,24 +1,12 @@
-def dummy_func(x: Int): Unit {
-    // LOADREF X
-    // LOADI 0
-    // GREATER_THAN
-    // JMP_IF_FALSE 7
-    // LOADREF x
-    // CALL PRINT
-    // LOADREF x
-    // LOADI 1
-    // SUB
-    // SET_LOCAL x
-    // JMP -7
-    // RETURN
-    while (x > 0) {
-        print(x)
-        x = x - 1
+def dummy_fib(x: Int): Int {
+    if (x <= 0) {
+        return 1
     }
+
+    return dummy_fib(x - 2) + dummy_fib(x - 1)
 }
 
 def main(): Unit {
     val y = 5
-    y = 30
     dummy_func(y)
 }

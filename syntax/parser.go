@@ -140,7 +140,7 @@ func (p *Parser) atom() Node {
 		p.consume(&TokenNumber{})
 		return &BasicLit{
 			Value: tokenNum.value,
-			Kind:  FloatLit,
+			Kind:  IntLit,
 		}
 	case *TokenString:
 		tokenString := p.curr().(*TokenString)

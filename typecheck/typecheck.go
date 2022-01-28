@@ -66,8 +66,8 @@ func typecheckExpr(expr syntax.Expr, level *backing.Level) backing.ValueType {
 	case *syntax.Name:
 		name := expr.(*syntax.Name)
 		// name can be a type, as well as a value
-		entry := backing.SLook(venv, backing.SSymbol(name.Value)).(*backing.EnvEntry)
-		if entry != nil {
+		entry := backing.SLook(venv, backing.SSymbol(name.Value))
+		if entry == nil {
 			// probably, this is just a type name
 			valueType := backing.SLook(tenv, backing.SSymbol(name.Value))
 			if valueType == nil {
@@ -75,7 +75,7 @@ func typecheckExpr(expr syntax.Expr, level *backing.Level) backing.ValueType {
 			}
 			return valueType.(backing.ValueType)
 		}
-		return entry.ResultType
+		return entry.(*backing.EnvEntry).ResultType
 	case *syntax.Field:
 		field := expr.(*syntax.Field)
 		return typecheckExpr(field.Type, level)
@@ -92,6 +92,11 @@ func typecheckExpr(expr syntax.Expr, level *backing.Level) backing.ValueType {
 				backing.ValueTypeToStr(rhsType))
 		}
 		return resultingType
+
+	// although call is the statement, we might implicitly treat it
+	// as an expression in that particular case
+	case *syntax.Call:
+		return typecheckCall(expr, level)
 	}
 }
 
@@ -152,7 +157,7 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 
 func typecheckProgram(program *syntax.Program, level *backing.Level) {
 	for _, stmt := range program.StmtList {
-		typecheckStmt(stmt, nil)
+		typecheckStmt(stmt, level)
 	}
 }
 
@@ -179,16 +184,49 @@ func typecheckStmt(stmt syntax.Stmt, level *backing.Level) {
 }
 
 func typecheckAssignment(stmt syntax.Stmt, level *backing.Level) {
-	// TODO(threadedstream):
+	assignment := stmt.(*syntax.Assignment)
+	assigneeName := assignment.Lhs.(*syntax.Name).Value
+	// should make assignment's Lhs of type *Name
+	lhs := backing.SLook(venv, backing.SSymbol(assigneeName))
+	if lhs == nil {
+		errorPos := assignment.Pos()
+		typecheckError("[%d:%d] assigning to the undefined variable %s\n",
+			errorPos.Line, errorPos.Column,
+			assigneeName,
+		)
+	}
+
+	lhsEntry := lhs.(*backing.EnvEntry)
+
+	rhsType := typecheckExpr(assignment.Rhs, level)
+
+	if lhsEntry.Immutable {
+		errorPos := assignment.Pos()
+		// TODO(threadedstream): consider returning at this point, as I see no point in
+		// reporting the type mismatch issue
+		typecheckError("[%d:%d] %s is immutable, thus non-assignable", errorPos.Line, errorPos.Column, assigneeName)
+	}
+
+	if lhsEntry.ResultType != rhsType {
+		errorPos := assignment.Pos()
+		typecheckError("[%d:%d] expected to have rhs type %s, but got %s\n",
+			errorPos.Line, errorPos.Column,
+			backing.ValueTypeToStr(lhsEntry.ResultType),
+			backing.ValueTypeToStr(rhsType))
+	}
 }
 
-func typecheckCall(stmt syntax.Stmt, level *backing.Level) {
+func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 	callStmt := stmt.(*syntax.Call)
-	calleeEntry := backing.SLook(venv, backing.SSymbol(callStmt.CalleeName.Value)).(*backing.EnvEntry)
-	if calleeEntry == nil {
+	entry := backing.SLook(venv, backing.SSymbol(callStmt.CalleeName.Value))
+	if entry == nil {
 		errorPos := callStmt.Pos()
 		typecheckError("[%d:%d] no function with name %s was found\n", errorPos.Line, errorPos.Column, callStmt.CalleeName.Value)
+		// bravely return at that point, as it panics if entry is nil
+		return backing.Undefined
 	}
+
+	calleeEntry := entry.(*backing.EnvEntry)
 	if calleeEntry.Kind != backing.EntryFun {
 		errorPos := callStmt.Pos()
 		typecheckError("[%d:%d] %s is not a function\n", errorPos.Line, errorPos.Column, callStmt.CalleeName.Value)
@@ -209,31 +247,26 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) {
 	for idx, paramType := range calleeEntry.ParamTypes {
 		if !backing.TypesEqual(paramType, valueTypes[idx]) {
 			errorPos := callStmt.Pos()
-			typecheckError("[%d:%d] arg %d expected type %s, but %s was provided", errorPos.Line, errorPos.Column,
-				idx, backing.ValueTypeToStr(paramType), backing.ValueTypeToStr(valueTypes[idx]))
+			typecheckError("[%d:%d] parameter %d expected type %s, but %s was provided\n", errorPos.Line, errorPos.Column,
+				idx+1, backing.ValueTypeToStr(paramType), backing.ValueTypeToStr(valueTypes[idx]))
 		}
 	}
+
+	return calleeEntry.ResultType
 }
 
-func typecheckBlockStmt(stmt syntax.Stmt, level *backing.Level) []struct {
-	exprType backing.ValueType
-	pos      scanner.Position
-} {
+func typecheckBlockStmt(stmt syntax.Stmt, level *backing.Level) (backing.ValueType, scanner.Position) {
 	blockStmt := stmt.(*syntax.BlockStmt)
-	returnValueTypes := make([]struct {
-		exprType backing.ValueType
-		pos      scanner.Position
-	}, 0)
 	for _, decStmt := range blockStmt.Stmts {
 		switch decStmt.(type) {
 		default:
 			typecheckStmt(decStmt, level)
 		case *syntax.ReturnStmt:
 			// handling the special case
-			returnValueTypes = append(returnValueTypes, typecheckReturnStmt(stmt, level))
+			return typecheckReturnStmt(decStmt, level)
 		}
 	}
-	return returnValueTypes
+	return backing.Unit, scanner.Position{}
 }
 
 func typecheckVarDeclStmt(stmt syntax.Stmt, level *backing.Level) {
@@ -243,12 +276,14 @@ func typecheckVarDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 		typecheckError("[%d:%d] name %s is reserved\n", errorPos.Line, errorPos.Column, varDeclStmt.Name.Value)
 	}
 	inferredType := typecheckExpr(varDeclStmt.Rhs, level)
-	backing.SEnter(venv, backing.SSymbol(varDeclStmt.Name.Value), backing.MakeVarEntry(
-		varDeclStmt.Name.Value,
-		level,
-		inferredType),
+	backing.SEnter(
+		venv, backing.SSymbol(varDeclStmt.Name.Value), backing.MakeVarEntry(
+			varDeclStmt.Name.Value,
+			level,
+			inferredType,
+			false,
+		),
 	)
-	//backing.StoreType(varDeclStmt.Name.Value, inferredType, false, nil, level)
 }
 
 func typecheckValDeclStmt(stmt syntax.Stmt, level *backing.Level) {
@@ -265,9 +300,9 @@ func typecheckValDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 			valDeclStmt.Name.Value,
 			level,
 			valueType,
+			true,
 		),
 	)
-	//backing.StoreType(valDeclStmt.Name.Value, valueType, true, nil, level)
 }
 
 func typecheckIfStmt(stmt syntax.Stmt, level *backing.Level) {
@@ -275,10 +310,12 @@ func typecheckIfStmt(stmt syntax.Stmt, level *backing.Level) {
 	condValueType := typecheckExpr(&ifStmt.Cond, level)
 	if condValueType != backing.Bool {
 		errorPos := ifStmt.Pos()
-		typecheckError("[%d:%d] condition is not of bool type", errorPos.Line, errorPos.Column)
+		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)
 	}
 	typecheckBlockStmt(ifStmt.Body, level)
-	typecheckStmt(ifStmt.ElseBody, level)
+	if ifStmt.ElseBody != nil {
+		typecheckStmt(ifStmt.ElseBody, level)
+	}
 }
 
 func typecheckWhileStmt(stmt syntax.Stmt, level *backing.Level) {
@@ -286,9 +323,11 @@ func typecheckWhileStmt(stmt syntax.Stmt, level *backing.Level) {
 	condValueType := typecheckExpr(&whileStmt.Cond, level)
 	if condValueType != backing.Bool {
 		errorPos := whileStmt.Pos()
-		typecheckError("[%d:%d] condition is not of bool type", errorPos.Line, errorPos.Column)
+		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)
 	}
+	backing.SBeginScope(venv)
 	typecheckBlockStmt(whileStmt.Body, level)
+	backing.SEndScope(venv)
 }
 
 func typecheckDefDeclStmt(stmt syntax.Stmt, level *backing.Level) {
@@ -297,6 +336,10 @@ func typecheckDefDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 
 	expectedReturnType := typecheckExpr(defDeclStmt.ReturnType, level)
 	funLevel := backing.NewLevel(defDeclStmt.Name.Value, level)
+	for _, param := range defDeclStmt.ParamList {
+		paramTypes = append(paramTypes, typecheckField(param, funLevel))
+	}
+
 	backing.SEnter(
 		venv, backing.SSymbol(defDeclStmt.Name.Value), backing.MakeFunEntry(
 			defDeclStmt.Name.Value,
@@ -306,45 +349,35 @@ func typecheckDefDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 	)
 
 	backing.SBeginScope(venv)
-	for _, param := range defDeclStmt.ParamList {
+	for idx, param := range defDeclStmt.ParamList {
 		backing.SEnter(
 			venv, backing.SSymbol(param.Name.Value), backing.MakeVarEntry(
 				param.Name.Value,
-				level,
-				typecheckField(param, funLevel),
+				funLevel,
+				paramTypes[idx],
+				false,
 			),
 		)
 	}
 
-	returnTypes := typecheckBlockStmt(defDeclStmt.Body, level)
-	for _, returnType := range returnTypes {
-		if returnType.exprType != expectedReturnType {
-			errorPos := returnType.pos
-			typecheckError("[%d:%d] expected return type %s but got %s",
-				errorPos.Line,
-				errorPos.Column,
-				backing.ValueTypeToStr(expectedReturnType),
-				backing.ValueTypeToStr(returnType.exprType))
-		}
+	returnType, pos := typecheckBlockStmt(defDeclStmt.Body, level)
+	if returnType != expectedReturnType {
+		errorPos := pos
+		typecheckError("[%d:%d] expected return type %s but got %s\n",
+			errorPos.Line,
+			errorPos.Column,
+			backing.ValueTypeToStr(expectedReturnType),
+			backing.ValueTypeToStr(returnType))
 	}
 
 	backing.SEndScope(venv)
 }
 
-func typecheckReturnStmt(stmt syntax.Stmt, level *backing.Level) struct {
-	exprType backing.ValueType
-	pos      scanner.Position
-} {
+func typecheckReturnStmt(stmt syntax.Stmt, level *backing.Level) (backing.ValueType, scanner.Position) {
 	returnStmt := stmt.(*syntax.ReturnStmt)
 	returnType := typecheckExpr(returnStmt.Value, level)
 	pos := returnStmt.Pos()
-	return struct {
-		exprType backing.ValueType
-		pos      scanner.Position
-	}{
-		exprType: returnType,
-		pos:      pos,
-	}
+	return returnType, pos
 }
 
 func typecheckField(field *syntax.Field, level *backing.Level) backing.ValueType {

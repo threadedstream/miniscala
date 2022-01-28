@@ -44,12 +44,13 @@ func NewLevel(label string, parent *Level) *Level {
 	return level
 }
 
-func MakeVarEntry(label string, level *Level, resultType ValueType) *EnvEntry {
+func MakeVarEntry(label string, level *Level, resultType ValueType, immutable bool) *EnvEntry {
 	entry := new(EnvEntry)
 	entry.Kind = EntryVar
 	entry.Level = level
 	entry.Label = label
 	entry.ResultType = resultType
+	entry.Immutable = immutable
 	return entry
 }
 
@@ -81,11 +82,22 @@ func BaseTypeEnv() SymbolTable {
 func BaseValueEnv() SymbolTable {
 	var symTable = SEmpty()
 
-	SEnter(symTable, SSymbol("print"), MakeFunEntry(
-		"print",
-		[]ValueType{String},
-		OutermostLevel(),
-		Unit))
+	SEnter(
+		symTable, SSymbol("print"), MakeFunEntry(
+			"print",
+			[]ValueType{String},
+			OutermostLevel(),
+			Unit),
+	)
+
+	SEnter(
+		symTable, SSymbol("to_string"), MakeFunEntry(
+			"to_string",
+			[]ValueType{Any},
+			OutermostLevel(),
+			String,
+		),
+	)
 
 	return symTable
 }

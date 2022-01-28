@@ -1,24 +1,27 @@
 package backing
 
-import "github.com/ThreadedStream/miniscala/assert"
+import (
+	"github.com/ThreadedStream/miniscala/assert"
+	"unsafe"
+)
 
 const (
 	TabSize = 131
 )
 
 type Binder struct {
-	Key     interface{}
+	Key     unsafe.Pointer
 	Value   interface{}
 	Next    *Binder
-	PrevTop interface{}
+	PrevTop unsafe.Pointer
 }
 
 type TabTable struct {
 	Table [TabSize]*Binder
-	Top   interface{}
+	Top   unsafe.Pointer
 }
 
-func NewBinder(key interface{}, value interface{}, next *Binder, prevTop interface{}) *Binder {
+func NewBinder(key unsafe.Pointer, value interface{}, next *Binder, prevTop unsafe.Pointer) *Binder {
 	binder := new(Binder)
 	binder.Key = key
 	binder.Value = value
@@ -32,14 +35,14 @@ func TabEmpty() *TabTable {
 	return table
 }
 
-func TabEnter(table *TabTable, key interface{}, value interface{}) {
-	index := key.(uintptr) % TabSize
+func TabEnter(table *TabTable, key unsafe.Pointer, value interface{}) {
+	index := uintptr(key) % TabSize
 	table.Table[index] = NewBinder(key, value, table.Table[index], table.Top)
 	table.Top = key
 }
 
-func TabLook(table *TabTable, key interface{}) interface{} {
-	index := key.(uintptr) % TabSize
+func TabLook(table *TabTable, key unsafe.Pointer) interface{} {
+	index := uintptr(key) % TabSize
 	for b := table.Table[index]; b != nil; b = b.Next {
 		if b.Key == key {
 			return b.Value
@@ -50,7 +53,7 @@ func TabLook(table *TabTable, key interface{}) interface{} {
 
 func TabPop(table *TabTable) interface{} {
 	k := table.Top
-	index := k.(uintptr) % TabSize
+	index := uintptr(k) % TabSize
 	binder := table.Table[index]
 	assert.Assert(binder != nil, "[in TabPop()] expected non-nil value of binder")
 	table.Table[index] = binder.Next
@@ -60,7 +63,7 @@ func TabPop(table *TabTable) interface{} {
 
 func TabDump(table *TabTable, show func(interface{}, interface{})) {
 	key := table.Top
-	index := key.(uintptr) % TabSize
+	index := uintptr(key) % TabSize
 	binder := table.Table[index]
 	if binder == nil {
 		return

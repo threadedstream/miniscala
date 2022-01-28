@@ -1,5 +1,7 @@
 package backing
 
+import "unsafe"
+
 const (
 	Size = 131
 )
@@ -23,10 +25,10 @@ func MakeSymbol(name string, next *Symbol) *Symbol {
 	return symbol
 }
 
-func hash(s string) int {
-	var h int
+func hash(s string) uint {
+	var h uint
 	for _, c := range s {
-		h = h*65599 + int(c)
+		h = h*65599 + uint(c)
 	}
 	return h
 }
@@ -50,11 +52,11 @@ func SEmpty() SymbolTable {
 }
 
 func SEnter(table SymbolTable, sym *Symbol, value interface{}) {
-	TabEnter(table, sym, value)
+	TabEnter(table, unsafe.Pointer(sym), value)
 }
 
 func SLook(table SymbolTable, sym *Symbol) interface{} {
-	return TabLook(table, sym)
+	return TabLook(table, unsafe.Pointer(sym))
 }
 
 func SBeginScope(table SymbolTable) {
@@ -62,9 +64,9 @@ func SBeginScope(table SymbolTable) {
 }
 
 func SEndScope(table SymbolTable) {
-	var sym *Symbol
+	var sym unsafe.Pointer
 
-	for sym != &markSym {
-		sym = TabPop(table).(*Symbol)
+	for sym != unsafe.Pointer(&markSym) {
+		sym = TabPop(table).(unsafe.Pointer)
 	}
 }

@@ -16,7 +16,8 @@ var (
 )
 
 type Level struct {
-	parent *Level
+	Label  string
+	Parent *Level
 }
 
 type EnvEntry struct {
@@ -31,9 +32,16 @@ type EnvEntry struct {
 func OutermostLevel() *Level {
 	if outermostLevel == nil {
 		outermostLevel = new(Level)
-		outermostLevel.parent = nil
+		outermostLevel.Parent = nil
 	}
 	return outermostLevel
+}
+
+func NewLevel(label string, parent *Level) *Level {
+	level := new(Level)
+	level.Label = label
+	level.Parent = parent
+	return level
 }
 
 func MakeVarEntry(label string, level *Level, resultType ValueType) *EnvEntry {

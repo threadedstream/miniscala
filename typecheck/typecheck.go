@@ -6,6 +6,7 @@ import (
 	"github.com/ThreadedStream/miniscala/backing"
 	"github.com/ThreadedStream/miniscala/syntax"
 	"os"
+	"text/scanner"
 )
 
 type typecheckerror struct {
@@ -171,7 +172,7 @@ func typecheckStmt(stmt syntax.Stmt, level *backing.Level) {
 	case *syntax.Call:
 		typecheckCall(stmt, level)
 	case *syntax.BlockStmt:
-		typecheckBlockStmt(stmt, backing.Undefined, level)
+		typecheckBlockStmt(stmt, level)
 	case *syntax.Assignment:
 		typecheckAssignment(stmt, level)
 	}
@@ -214,17 +215,25 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) {
 	}
 }
 
-func typecheckBlockStmt(stmt syntax.Stmt, expectedReturnType backing.ValueType, level *backing.Level) {
+func typecheckBlockStmt(stmt syntax.Stmt, level *backing.Level) []struct {
+	exprType backing.ValueType
+	pos      scanner.Position
+} {
 	blockStmt := stmt.(*syntax.BlockStmt)
+	returnValueTypes := make([]struct {
+		exprType backing.ValueType
+		pos      scanner.Position
+	}, 0)
 	for _, decStmt := range blockStmt.Stmts {
 		switch decStmt.(type) {
 		default:
 			typecheckStmt(decStmt, level)
 		case *syntax.ReturnStmt:
 			// handling the special case
-			typecheckReturnStmt(stmt, expectedReturnType, level)
+			returnValueTypes = append(returnValueTypes, typecheckReturnStmt(stmt, level))
 		}
 	}
+	return returnValueTypes
 }
 
 func typecheckVarDeclStmt(stmt syntax.Stmt, level *backing.Level) {
@@ -268,7 +277,7 @@ func typecheckIfStmt(stmt syntax.Stmt, level *backing.Level) {
 		errorPos := ifStmt.Pos()
 		typecheckError("[%d:%d] condition is not of bool type", errorPos.Line, errorPos.Column)
 	}
-	typecheckBlockStmt(ifStmt.Body, backing.Undefined, level)
+	typecheckBlockStmt(ifStmt.Body, level)
 	typecheckStmt(ifStmt.ElseBody, level)
 }
 
@@ -279,34 +288,62 @@ func typecheckWhileStmt(stmt syntax.Stmt, level *backing.Level) {
 		errorPos := whileStmt.Pos()
 		typecheckError("[%d:%d] condition is not of bool type", errorPos.Line, errorPos.Column)
 	}
-	typecheckBlockStmt(whileStmt.Body, backing.Undefined, level)
+	typecheckBlockStmt(whileStmt.Body, level)
 }
 
 func typecheckDefDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 	defDeclStmt := stmt.(*syntax.DefDeclStmt)
 	var paramTypes []backing.ValueType
-	for _, param := range defDeclStmt.ParamList {
-		paramTypes = append(paramTypes, typecheckField(param, level))
-	}
+
 	expectedReturnType := typecheckExpr(defDeclStmt.ReturnType, level)
+	funLevel := backing.NewLevel(defDeclStmt.Name.Value, level)
 	backing.SEnter(
 		venv, backing.SSymbol(defDeclStmt.Name.Value), backing.MakeFunEntry(
 			defDeclStmt.Name.Value,
 			paramTypes,
-			backing.OutermostLevel(),
+			funLevel,
 			expectedReturnType),
 	)
-	typecheckBlockStmt(defDeclStmt.Body, expectedReturnType, level)
+
+	backing.SBeginScope(venv)
+	for _, param := range defDeclStmt.ParamList {
+		backing.SEnter(
+			venv, backing.SSymbol(param.Name.Value), backing.MakeVarEntry(
+				param.Name.Value,
+				level,
+				typecheckField(param, funLevel),
+			),
+		)
+	}
+
+	returnTypes := typecheckBlockStmt(defDeclStmt.Body, level)
+	for _, returnType := range returnTypes {
+		if returnType.exprType != expectedReturnType {
+			errorPos := returnType.pos
+			typecheckError("[%d:%d] expected return type %s but got %s",
+				errorPos.Line,
+				errorPos.Column,
+				backing.ValueTypeToStr(expectedReturnType),
+				backing.ValueTypeToStr(returnType.exprType))
+		}
+	}
+
+	backing.SEndScope(venv)
 }
 
-func typecheckReturnStmt(stmt syntax.Stmt, expectedReturnType backing.ValueType, level *backing.Level) {
+func typecheckReturnStmt(stmt syntax.Stmt, level *backing.Level) struct {
+	exprType backing.ValueType
+	pos      scanner.Position
+} {
 	returnStmt := stmt.(*syntax.ReturnStmt)
-	actualReturnType := typecheckExpr(returnStmt.Value, level)
-	if actualReturnType != expectedReturnType {
-		errorPos := returnStmt.Pos()
-		typecheckError("[%d:%d] expected to return %s, but got %s\n", errorPos.Line, errorPos.Column,
-			backing.ValueTypeToStr(expectedReturnType),
-			backing.ValueTypeToStr(actualReturnType))
+	returnType := typecheckExpr(returnStmt.Value, level)
+	pos := returnStmt.Pos()
+	return struct {
+		exprType backing.ValueType
+		pos      scanner.Position
+	}{
+		exprType: returnType,
+		pos:      pos,
 	}
 }
 

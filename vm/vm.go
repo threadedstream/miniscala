@@ -84,9 +84,16 @@ func (vm *VM) Run() {
 		case *InstrLoadRef:
 			loadArg := vm.chunk.instrStream[oldIp].(*InstrLoadRef)
 			value := backing.SLook(backing.Venv, backing.SSymbol(loadArg.RefName))
-			if value != nil {
-				vm.push(value.(backing.Value))
+			if value == nil {
+				// very likely that the desired value resides in argument pool, just pull that out of there
+				value, ok := vm.chunk.argPool[loadArg.RefName]
+				if !ok {
+					vm.abort("undefined reference to name %s", loadArg.RefName)
+				}
+				vm.push(value)
+				continue
 			}
+			vm.push(value.(backing.Value))
 		case *InstrGreaterThan:
 			var boolValue backing.Value
 			secondOperand := vm.pop()
@@ -287,7 +294,8 @@ func (vm *VM) Run() {
 			vm.ip = 0
 			for i := 0; i < len(call.ArgNames); i++ {
 				value := vm.pop()
-				backing.SEnter(backing.Venv, backing.SSymbol(call.ArgNames[i]), value)
+				vm.chunk.argPool[call.ArgNames[i]] = value
+				//backing.SEnter(backing.Venv, backing.SSymbol(call.ArgNames[i]), value)
 			}
 		case *InstrReturn:
 			var returnValue backing.Value

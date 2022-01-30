@@ -22,8 +22,8 @@ var (
 		"print": {backing.Any},
 	}
 
-	venv = backing.Venv
-	tenv = backing.Tenv
+	venv = &backing.Venv
+	tenv = &backing.Tenv
 )
 
 func typecheckError(format string, args ...interface{}) {
@@ -36,8 +36,8 @@ func typecheckError(format string, args ...interface{}) {
 
 func Typecheck(program *syntax.Program) bool {
 	assert.Assert(program != nil, "program is nil!!!")
-	venv = backing.BaseValueEnv()
-	tenv = backing.BaseTypeEnv()
+	*venv = backing.BaseValueEnv()
+	*tenv = backing.BaseTypeEnv()
 	level := backing.OutermostLevel()
 	//typifyReservedFunctions()
 	typecheckProgram(program, level)
@@ -67,10 +67,10 @@ func typecheckExpr(expr syntax.Expr, level *backing.Level) backing.ValueType {
 	case *syntax.Name:
 		name := expr.(*syntax.Name)
 		// name can be a type, as well as a value
-		entry := backing.SLook(venv, backing.SSymbol(name.Value))
+		entry := backing.SLook(*venv, backing.SSymbol(name.Value))
 		if entry == nil {
 			// probably, this is just a type name
-			valueType := backing.SLook(tenv, backing.SSymbol(name.Value))
+			valueType := backing.SLook(*tenv, backing.SSymbol(name.Value))
 			if valueType == nil {
 				errorPos := name.Pos()
 				typecheckError("[%d:%d] name %s is neither a type name nor var, nor val\n", errorPos.Line, errorPos.Column, name.Value)
@@ -190,7 +190,7 @@ func typecheckAssignment(stmt syntax.Stmt, level *backing.Level) {
 	assignment := stmt.(*syntax.Assignment)
 	assigneeName := assignment.Lhs.(*syntax.Name).Value
 	// should make assignment's Lhs of type *Name
-	lhs := backing.SLook(venv, backing.SSymbol(assigneeName))
+	lhs := backing.SLook(*venv, backing.SSymbol(assigneeName))
 	if lhs == nil {
 		errorPos := assignment.Pos()
 		typecheckError("[%d:%d] assigning to the undefined variable %s\n",
@@ -222,7 +222,7 @@ func typecheckAssignment(stmt syntax.Stmt, level *backing.Level) {
 
 func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 	callStmt := stmt.(*syntax.Call)
-	entry := backing.SLook(venv, backing.SSymbol(callStmt.CalleeName.Value))
+	entry := backing.SLook(*venv, backing.SSymbol(callStmt.CalleeName.Value))
 	if entry == nil {
 		errorPos := callStmt.Pos()
 		typecheckError("[%d:%d] no function with name %s was found\n", errorPos.Line, errorPos.Column, callStmt.CalleeName.Value)
@@ -289,7 +289,7 @@ func typecheckVarDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 	}
 	inferredType := typecheckExpr(varDeclStmt.Rhs, level)
 	backing.SEnter(
-		venv, backing.SSymbol(varDeclStmt.Name.Value), backing.MakeVarEntry(
+		*venv, backing.SSymbol(varDeclStmt.Name.Value), backing.MakeVarEntry(
 			varDeclStmt.Name.Value,
 			level,
 			inferredType,
@@ -309,7 +309,7 @@ func typecheckValDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 	// TODO(threadedstream): there's a room for a constant folding optimization
 	valueType := typecheckExpr(valDeclStmt.Rhs, level)
 	backing.SEnter(
-		venv, backing.SSymbol(valDeclStmt.Name.Value), backing.MakeVarEntry(
+		*venv, backing.SSymbol(valDeclStmt.Name.Value), backing.MakeVarEntry(
 			valDeclStmt.Name.Value,
 			level,
 			valueType,
@@ -340,9 +340,9 @@ func typecheckWhileStmt(stmt syntax.Stmt, level *backing.Level) {
 		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)
 		return
 	}
-	backing.SBeginScope(venv)
+	backing.SBeginScope(*venv)
 	typecheckBlockStmt(whileStmt.Body, level)
-	backing.SEndScope(venv)
+	backing.SEndScope(*venv)
 }
 
 func typecheckDefDeclStmt(stmt syntax.Stmt, level *backing.Level) {
@@ -356,17 +356,17 @@ func typecheckDefDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 	}
 
 	backing.SEnter(
-		venv, backing.SSymbol(defDeclStmt.Name.Value), backing.MakeFunEntry(
+		*venv, backing.SSymbol(defDeclStmt.Name.Value), backing.MakeFunEntry(
 			defDeclStmt.Name.Value,
 			paramTypes,
 			funLevel,
 			expectedReturnType),
 	)
 
-	backing.SBeginScope(venv)
+	backing.SBeginScope(*venv)
 	for idx, param := range defDeclStmt.ParamList {
 		backing.SEnter(
-			venv, backing.SSymbol(param.Name.Value), backing.MakeVarEntry(
+			*venv, backing.SSymbol(param.Name.Value), backing.MakeVarEntry(
 				param.Name.Value,
 				funLevel,
 				paramTypes[idx],
@@ -385,7 +385,7 @@ func typecheckDefDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 			backing.ValueTypeToStr(returnType))
 	}
 
-	backing.SEndScope(venv)
+	backing.SEndScope(*venv)
 }
 
 func typecheckReturnStmt(stmt syntax.Stmt, level *backing.Level) (backing.ValueType, scanner.Position) {

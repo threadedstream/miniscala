@@ -143,6 +143,10 @@ func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 	defStmt := stmt.(*syntax.DefDeclStmt)
 	chunk := newChunk(nil, defStmt.Name.Value)
 
+	for _, param := range defStmt.ParamList {
+		chunk.argPool[param.Name.Value] = backing.NullValue()
+	}
+
 	chunk.doesReturn = defStmt.ReturnType.(*syntax.Name).Value != "Unit"
 	chunkStore[defStmt.Name.Value] = chunk
 	c.compileBlockStmt(defStmt.Body)
@@ -214,6 +218,8 @@ func (c *compiler) compileName(expr syntax.Expr) {
 func (c *compiler) compileCall(expr syntax.Expr) {
 	call := expr.(*syntax.Call)
 
+	chunk := lookupChunk(call.CalleeName.Value, false, nil)
+
 	callInstr := &InstrCall{
 		FuncName: call.CalleeName.Value,
 	}
@@ -222,9 +228,9 @@ func (c *compiler) compileCall(expr syntax.Expr) {
 		c.compileExpr(arg)
 	}
 
-	//for k, _ := range chunk.localValues {
-	//	callInstr.ArgNames = append(callInstr.ArgNames, k)
-	//}
+	for k, _ := range chunk.argPool {
+		callInstr.ArgNames = append(callInstr.ArgNames, k)
+	}
 
 	c.code = append(c.code, callInstr)
 }

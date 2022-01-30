@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/ThreadedStream/miniscala/syntax"
 	"github.com/ThreadedStream/miniscala/typecheck"
+	"github.com/ThreadedStream/miniscala/vm"
 	"io"
 	"log"
 	"os"
@@ -126,7 +127,14 @@ func main() {
 		return
 	}
 
-	typecheck.Typecheck(program)
+	hadErrors = typecheck.Typecheck(program)
+	if hadErrors {
+		return
+	}
+
+	vmHandle := vm.NewVM(program)
+
+	vmHandle.Run()
 
 	//execVm := vm.NewVM(program)
 	//

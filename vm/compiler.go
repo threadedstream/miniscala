@@ -8,7 +8,7 @@ import (
 
 var (
 	// TODO(threadedstream): add more reserved functions
-	reservedFuncNames = [...]string{"print"}
+	reservedFuncNames = [...]string{"print", "to_string"}
 )
 
 type compiler struct {
@@ -142,9 +142,6 @@ func (c *compiler) compileWhileStmt(stmt syntax.Stmt) {
 func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 	defStmt := stmt.(*syntax.DefDeclStmt)
 	chunk := newChunk(nil, defStmt.Name.Value)
-	//for _, param := range defStmt.ParamList {
-	//	chunk.localValues[param.Name.Value] = backing.NullValue()
-	//}
 
 	chunk.doesReturn = defStmt.ReturnType.(*syntax.Name).Value != "Unit"
 	chunkStore[defStmt.Name.Value] = chunk
@@ -156,7 +153,7 @@ func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 		break
 	}
 
-	// dirty hack to mutate an element in a map
+	// dirty hack to mutate an element in a map (not a hack at all)
 	chunk = chunkStore[defStmt.Name.Value]
 
 	// allocate a space for an instruction buffer
@@ -178,6 +175,8 @@ func (c *compiler) compileExpr(expr syntax.Expr) {
 		c.compileName(expr)
 	case *syntax.Operation:
 		c.compileOperation(expr)
+	case *syntax.Call:
+		c.compileCall(expr)
 	}
 }
 
@@ -213,12 +212,7 @@ func (c *compiler) compileName(expr syntax.Expr) {
 }
 
 func (c *compiler) compileCall(expr syntax.Expr) {
-	var (
-		chunk Chunk
-		call  = expr.(*syntax.Call)
-	)
-
-	chunk = lookupChunk(call.CalleeName.Value, true, nil)
+	call := expr.(*syntax.Call)
 
 	callInstr := &InstrCall{
 		FuncName: call.CalleeName.Value,

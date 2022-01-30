@@ -7,6 +7,7 @@ def dummy_fib(x: Int): Int {
 }
 
 def main(): Unit {
-    val y = 5
-    dummy_func(y)
+    var y = 5
+
+    print(to_string(dummy_fib(y)))
 }

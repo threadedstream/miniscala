@@ -22,8 +22,8 @@ var (
 		"print": {backing.Any},
 	}
 
-	venv backing.SymbolTable
-	tenv backing.SymbolTable
+	venv = backing.Venv
+	tenv = backing.Tenv
 )
 
 func typecheckError(format string, args ...interface{}) {
@@ -34,7 +34,7 @@ func typecheckError(format string, args ...interface{}) {
 	hadErrors = true
 }
 
-func Typecheck(program *syntax.Program) {
+func Typecheck(program *syntax.Program) bool {
 	assert.Assert(program != nil, "program is nil!!!")
 	venv = backing.BaseValueEnv()
 	tenv = backing.BaseTypeEnv()
@@ -45,8 +45,8 @@ func Typecheck(program *syntax.Program) {
 		for _, err := range errors {
 			fmt.Fprintf(os.Stderr, err.fmt, err.args...)
 		}
-		os.Exit(1)
 	}
+	return hadErrors
 }
 
 func typifyReservedFunctions() {
@@ -58,7 +58,8 @@ func typifyReservedFunctions() {
 func typecheckExpr(expr syntax.Expr, level *backing.Level) backing.ValueType {
 	switch expr.(type) {
 	default:
-		typecheckError("unknown node in typecheckExpr()\n")
+		errorPos := expr.Pos()
+		typecheckError("[%d:%d] undefined type\n", errorPos.Line, errorPos.Column)
 		return backing.Undefined
 	case *syntax.BasicLit:
 		basicLit := expr.(*syntax.BasicLit)
@@ -71,7 +72,9 @@ func typecheckExpr(expr syntax.Expr, level *backing.Level) backing.ValueType {
 			// probably, this is just a type name
 			valueType := backing.SLook(tenv, backing.SSymbol(name.Value))
 			if valueType == nil {
-				typecheckError("name %s is neither a type name nor var, nor val\n", name.Value)
+				errorPos := name.Pos()
+				typecheckError("[%d:%d] name %s is neither a type name nor var, nor val\n", errorPos.Line, errorPos.Column, name.Value)
+				return backing.Undefined
 			}
 			return valueType.(backing.ValueType)
 		}
@@ -194,6 +197,7 @@ func typecheckAssignment(stmt syntax.Stmt, level *backing.Level) {
 			errorPos.Line, errorPos.Column,
 			assigneeName,
 		)
+		return
 	}
 
 	lhsEntry := lhs.(*backing.EnvEntry)
@@ -202,9 +206,9 @@ func typecheckAssignment(stmt syntax.Stmt, level *backing.Level) {
 
 	if lhsEntry.Immutable {
 		errorPos := assignment.Pos()
-		// TODO(threadedstream): consider returning at this point, as I see no point in
 		// reporting the type mismatch issue
 		typecheckError("[%d:%d] %s is immutable, thus non-assignable", errorPos.Line, errorPos.Column, assigneeName)
+		return
 	}
 
 	if lhsEntry.ResultType != rhsType {
@@ -230,6 +234,7 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 	if calleeEntry.Kind != backing.EntryFun {
 		errorPos := callStmt.Pos()
 		typecheckError("[%d:%d] %s is not a function\n", errorPos.Line, errorPos.Column, callStmt.CalleeName.Value)
+		return backing.Undefined
 	}
 
 	// first, check number of passed parameters
@@ -237,11 +242,16 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 		errorPos := callStmt.Pos()
 		typecheckError("[%d:%d] function %s expects %d parameters, but %d were provided\n", errorPos.Line, errorPos.Column,
 			callStmt.CalleeName.Value, len(calleeEntry.ParamTypes), len(callStmt.ArgList))
+		return backing.Undefined
 	}
 
 	var valueTypes []backing.ValueType
 	for _, arg := range callStmt.ArgList {
-		valueTypes = append(valueTypes, typecheckExpr(arg, level))
+		argType := typecheckExpr(arg, level)
+		if argType == backing.Undefined {
+			return backing.Undefined
+		}
+		valueTypes = append(valueTypes, argType)
 	}
 
 	for idx, paramType := range calleeEntry.ParamTypes {
@@ -249,6 +259,7 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 			errorPos := callStmt.Pos()
 			typecheckError("[%d:%d] parameter %d expected type %s, but %s was provided\n", errorPos.Line, errorPos.Column,
 				idx+1, backing.ValueTypeToStr(paramType), backing.ValueTypeToStr(valueTypes[idx]))
+			return backing.Undefined
 		}
 	}
 
@@ -274,6 +285,7 @@ func typecheckVarDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 	if syntax.IsKeyword(varDeclStmt.Name.Value) {
 		errorPos := varDeclStmt.Pos()
 		typecheckError("[%d:%d] name %s is reserved\n", errorPos.Line, errorPos.Column, varDeclStmt.Name.Value)
+		return
 	}
 	inferredType := typecheckExpr(varDeclStmt.Rhs, level)
 	backing.SEnter(
@@ -292,6 +304,7 @@ func typecheckValDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 	if syntax.IsKeyword(valDeclStmt.Name.Value) {
 		errorPos := valDeclStmt.Pos()
 		typecheckError("[%d:%d] name %s is reserved\n", errorPos.Line, errorPos.Column, valDeclStmt.Name.Value)
+		return
 	}
 	// TODO(threadedstream): there's a room for a constant folding optimization
 	valueType := typecheckExpr(valDeclStmt.Rhs, level)
@@ -311,6 +324,7 @@ func typecheckIfStmt(stmt syntax.Stmt, level *backing.Level) {
 	if condValueType != backing.Bool {
 		errorPos := ifStmt.Pos()
 		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)
+		return
 	}
 	typecheckBlockStmt(ifStmt.Body, level)
 	if ifStmt.ElseBody != nil {
@@ -324,6 +338,7 @@ func typecheckWhileStmt(stmt syntax.Stmt, level *backing.Level) {
 	if condValueType != backing.Bool {
 		errorPos := whileStmt.Pos()
 		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)
+		return
 	}
 	backing.SBeginScope(venv)
 	typecheckBlockStmt(whileStmt.Body, level)

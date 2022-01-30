@@ -7,6 +7,8 @@ const (
 )
 
 var (
+	Venv      SymbolTable
+	Tenv      SymbolTable
 	hashtable [Size]*Symbol
 	markSym   = Symbol{"<mark>", nil}
 )

@@ -23,29 +23,6 @@ type VM struct {
 	callChain    [256]ChainEntry
 }
 
-func isReservedCall(name string) bool {
-	switch name {
-	default:
-		return false
-	case "print":
-		return true
-	}
-}
-
-func (vm *VM) dispatchReservedCall(name string) {
-	switch name {
-	default:
-		vm.abort("%s is not a call to reserved function", name)
-	case "print":
-		vm.executePrint()
-	}
-}
-
-func (vm *VM) executePrint() {
-	valueToPrint := vm.pop()
-	fmt.Printf("%v", valueToPrint.Value)
-}
-
 func NewVM(program *syntax.Program) *VM {
 	comp := newCompiler()
 	comp.compile(program)
@@ -106,20 +83,38 @@ func (vm *VM) Run() {
 			vm.push(load.Value)
 		case *InstrLoadRef:
 			loadArg := vm.chunk.instrStream[oldIp].(*InstrLoadRef)
-			// TODO(threadedstream): replace with a call to backing.Lookup
-			vm.push(vm.chunk.localValues[loadArg.RefName])
+			value := backing.SLook(backing.Venv, backing.SSymbol(loadArg.RefName))
+			if value != nil {
+				vm.push(value.(backing.Value))
+			}
 		case *InstrGreaterThan:
 			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			if firstOperand.IsString() && secondOperand.IsString() {
+			switch {
+			case firstOperand.IsString() && secondOperand.IsString():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsString() > secondOperand.AsString(),
 					ValueType: backing.Bool,
 				}
-			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+			case firstOperand.IsFloat() && secondOperand.IsFloat():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsFloat() > secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsInt() > secondOperand.AsInt(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsFloat():
+				boolValue = backing.Value{
+					Value:     float64(firstOperand.AsInt()) > secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsFloat() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() > float64(secondOperand.AsInt()),
 					ValueType: backing.Bool,
 				}
 			}
@@ -128,14 +123,30 @@ func (vm *VM) Run() {
 			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			if firstOperand.IsString() && secondOperand.IsString() {
+			switch {
+			case firstOperand.IsString() && secondOperand.IsString():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsString() < secondOperand.AsString(),
 					ValueType: backing.Bool,
 				}
-			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+			case firstOperand.IsFloat() && secondOperand.IsFloat():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsFloat() < secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsInt() < secondOperand.AsInt(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsFloat():
+				boolValue = backing.Value{
+					Value:     float64(firstOperand.AsInt()) < secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsFloat() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() < float64(secondOperand.AsInt()),
 					ValueType: backing.Bool,
 				}
 			}
@@ -144,14 +155,30 @@ func (vm *VM) Run() {
 			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			if firstOperand.IsString() && secondOperand.IsString() {
+			switch {
+			case firstOperand.IsString() && secondOperand.IsString():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsString() >= secondOperand.AsString(),
 					ValueType: backing.Bool,
 				}
-			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+			case firstOperand.IsFloat() && secondOperand.IsFloat():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsFloat() >= secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsInt() >= secondOperand.AsInt(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsFloat():
+				boolValue = backing.Value{
+					Value:     float64(firstOperand.AsInt()) >= secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsFloat() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() >= float64(secondOperand.AsInt()),
 					ValueType: backing.Bool,
 				}
 			}
@@ -160,14 +187,30 @@ func (vm *VM) Run() {
 			var boolValue backing.Value
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
-			if firstOperand.IsString() && secondOperand.IsString() {
+			switch {
+			case firstOperand.IsString() && secondOperand.IsString():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsString() <= secondOperand.AsString(),
 					ValueType: backing.Bool,
 				}
-			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+			case firstOperand.IsFloat() && secondOperand.IsFloat():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsFloat() <= secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsInt() <= secondOperand.AsInt(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsFloat():
+				boolValue = backing.Value{
+					Value:     float64(firstOperand.AsInt()) <= secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsFloat() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() <= float64(secondOperand.AsInt()),
 					ValueType: backing.Bool,
 				}
 			}
@@ -177,14 +220,30 @@ func (vm *VM) Run() {
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
 
-			if firstOperand.IsString() && secondOperand.IsString() {
+			switch {
+			case firstOperand.IsString() && secondOperand.IsString():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsString() == secondOperand.AsString(),
 					ValueType: backing.Bool,
 				}
-			} else if firstOperand.IsFloat() && secondOperand.IsFloat() {
+			case firstOperand.IsFloat() && secondOperand.IsFloat():
 				boolValue = backing.Value{
 					Value:     firstOperand.AsFloat() == secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsInt() == secondOperand.AsInt(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsInt() && secondOperand.IsFloat():
+				boolValue = backing.Value{
+					Value:     float64(firstOperand.AsInt()) == secondOperand.AsFloat(),
+					ValueType: backing.Bool,
+				}
+			case firstOperand.IsFloat() && secondOperand.IsInt():
+				boolValue = backing.Value{
+					Value:     firstOperand.AsFloat() == float64(secondOperand.AsInt()),
 					ValueType: backing.Bool,
 				}
 			}
@@ -214,8 +273,8 @@ func (vm *VM) Run() {
 			}
 		case *InstrCall:
 			call := vm.chunk.instrStream[oldIp].(*InstrCall)
-			if isReservedCall(call.FuncName) {
-				vm.dispatchReservedCall(call.FuncName)
+			if backing.IsRuntimeCall(call.FuncName) {
+				backing.DispatchRuntimeFuncCall(call.FuncName)
 				break
 			}
 			chunk := lookupChunk(call.FuncName, true, vm.abort)
@@ -228,7 +287,7 @@ func (vm *VM) Run() {
 			vm.ip = 0
 			for i := 0; i < len(call.ArgNames); i++ {
 				value := vm.pop()
-				backing.StoreValue(call.ArgNames[i], value, vm.chunk.localValues, nil, backing.Assign)
+				backing.SEnter(backing.Venv, backing.SSymbol(call.ArgNames[i]), value)
 			}
 		case *InstrReturn:
 			var returnValue backing.Value
@@ -246,9 +305,7 @@ func (vm *VM) Run() {
 		case *InstrSetLocal:
 			setLocalInstr := vm.chunk.instrStream[oldIp].(*InstrSetLocal)
 			valueToAssign := vm.pop()
-			valueType := backing.MiniscalaTypeToValueType(setLocalInstr.Type)
-			backing.StoreType(setLocalInstr.Name, valueType, setLocalInstr.Immutable, vm.chunk.localValueTypes)
-			backing.StoreValue(setLocalInstr.Name, valueToAssign, vm.chunk.localValues, vm.chunk.localValueTypes, setLocalInstr.StoringCtx)
+			backing.SEnter(backing.Venv, backing.SSymbol(setLocalInstr.Name), valueToAssign)
 		}
 	}
 }

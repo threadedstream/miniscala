@@ -18,9 +18,9 @@ var (
 	errors    []typecheckerror
 	hadErrors = false
 	// map from reserved functions' names to the type of their parameters
-	reservedFunctions = map[string][]backing.ValueType{
-		"print": {backing.Any},
-	}
+	//reservedFunctions = map[string][]backing.ValueType{
+	//	"print": {backing.Any},
+	//}
 
 	venv = &backing.Venv
 	tenv = &backing.Tenv
@@ -49,9 +49,32 @@ func Typecheck(program *syntax.Program) bool {
 	return hadErrors
 }
 
-func typifyReservedFunctions() {
-	for name, paramTypes := range reservedFunctions {
-		backing.StoreType(name, backing.Unit, true, paramTypes, nil)
+//func typifyReservedFunctions() {
+//	for name, paramTypes := range reservedFunctions {
+//		backing.StoreType(name, backing.Unit, true, paramTypes, nil)
+//	}
+//}
+
+func typecheckUnary(targetType backing.ValueType, op syntax.Operator) (backing.ValueType, bool) {
+	switch op {
+	default:
+		return backing.Undefined, false
+	case syntax.Minus:
+		switch targetType {
+		default:
+			return backing.Undefined, false
+		case backing.Int:
+			return backing.Int, true
+		case backing.Float:
+			return backing.Float, true
+		}
+	case syntax.LogicalNot:
+		switch targetType {
+		default:
+			return backing.Undefined, false
+		case backing.Bool:
+			return backing.Bool, true
+		}
 	}
 }
 
@@ -83,9 +106,21 @@ func typecheckExpr(expr syntax.Expr, level *backing.Level) backing.ValueType {
 		field := expr.(*syntax.Field)
 		return typecheckExpr(field.Type, level)
 	case *syntax.Operation:
+		var lhsType, rhsType backing.ValueType
 		operation := expr.(*syntax.Operation)
-		lhsType := typecheckExpr(operation.Lhs, level)
-		rhsType := typecheckExpr(operation.Rhs, level)
+		lhsType = typecheckExpr(operation.Lhs, level)
+		if operation.Rhs == nil {
+			// handling unary
+			resultingType, ok := typecheckUnary(lhsType, operation.Op)
+			if !ok {
+				errorPos := operation.Pos()
+				typecheckError("[%d:%d] unary %d didn't expect expression of type %s", errorPos.Line, errorPos.Column,
+					operation.Op, backing.ValueTypeToStr(resultingType))
+				return backing.Undefined
+			}
+			return resultingType
+		}
+		rhsType = typecheckExpr(operation.Rhs, level)
 		resultingType, compatible := typesCompatible(lhsType, rhsType, operation.Op)
 		if !compatible {
 			errorPos := operation.Pos()
@@ -154,6 +189,13 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 			return backing.Bool, true
 		case t1 == backing.Bool && t2 == backing.Bool:
 			return backing.Bool, true
+		}
+	case syntax.Mod:
+		switch {
+		default:
+			return backing.Undefined, false
+		case t1 == backing.Int && t2 == backing.Int:
+			return backing.Int, true
 		}
 	}
 }
@@ -320,7 +362,7 @@ func typecheckValDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 
 func typecheckIfStmt(stmt syntax.Stmt, level *backing.Level) {
 	ifStmt := stmt.(*syntax.IfStmt)
-	condValueType := typecheckExpr(&ifStmt.Cond, level)
+	condValueType := typecheckExpr(ifStmt.Cond, level)
 	if condValueType != backing.Bool {
 		errorPos := ifStmt.Pos()
 		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)
@@ -334,7 +376,7 @@ func typecheckIfStmt(stmt syntax.Stmt, level *backing.Level) {
 
 func typecheckWhileStmt(stmt syntax.Stmt, level *backing.Level) {
 	whileStmt := stmt.(*syntax.WhileStmt)
-	condValueType := typecheckExpr(&whileStmt.Cond, level)
+	condValueType := typecheckExpr(whileStmt.Cond, level)
 	if condValueType != backing.Bool {
 		errorPos := whileStmt.Pos()
 		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)

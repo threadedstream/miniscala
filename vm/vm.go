@@ -78,6 +78,10 @@ func (vm *VM) Run() {
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
 			vm.push(backing.Div(firstOperand, secondOperand, nil, backing.Vm))
+		case *InstrMod:
+			secondOperand := vm.pop()
+			firstOperand := vm.pop()
+			vm.push(backing.Mod(firstOperand, secondOperand, nil, backing.Vm))
 		case *InstrLoadImm:
 			load := vm.chunk.instrStream[oldIp].(*InstrLoadImm)
 			vm.push(load.Value)
@@ -281,8 +285,16 @@ func (vm *VM) Run() {
 		case *InstrCall:
 			call := vm.chunk.instrStream[oldIp].(*InstrCall)
 			if backing.IsRuntimeCall(call.FuncName) {
-				backing.DispatchRuntimeFuncCall(call.FuncName)
-				break
+				reservedFuncInfo := backing.SLook(backing.Venv, backing.SSymbol(call.FuncName)).(*backing.EnvEntry)
+				var arguments []backing.Value
+				for _, _ = range reservedFuncInfo.ParamTypes {
+					arguments = append(arguments, vm.pop())
+				}
+				val := backing.DispatchRuntimeFuncCall(call.FuncName, arguments...)
+				if val.ValueType != backing.Unit {
+					vm.push(val)
+				}
+				continue
 			}
 			chunk := lookupChunk(call.FuncName, true, vm.abort)
 			vm.callChain[vm.nestingLevel] = ChainEntry{
@@ -292,9 +304,11 @@ func (vm *VM) Run() {
 			vm.chunk = chunk
 			vm.nestingLevel++
 			vm.ip = 0
+			// TODO(threadedstream): get rid of this
+			vm.chunk.argPool = make(map[string]backing.Value)
 			for i := 0; i < len(call.ArgNames); i++ {
 				value := vm.pop()
-				vm.chunk.argPool[call.ArgNames[i]] = value
+				vm.chunk.argPool[call.ArgNames[len(call.ArgNames)-i-1]] = value
 				//backing.SEnter(backing.Venv, backing.SSymbol(call.ArgNames[i]), value)
 			}
 		case *InstrReturn:

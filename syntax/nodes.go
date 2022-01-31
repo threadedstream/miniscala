@@ -11,12 +11,16 @@ const (
 	Minus                              // -
 	Mul                                // *
 	Div                                // /
+	Mod                                // %
 	GreaterThan                        // >
 	GreaterThanOrEqual                 // >=
 	LessThan                           // <
 	LessThanOrEqual                    // <=
 	Equal                              // ==
 	NotEqual                           // !=
+	LogicalAnd                         // &&
+	LogicalOr                          // ||
+	LogicalNot                         // !
 	InvalidOperator    = -1
 )
 
@@ -94,7 +98,7 @@ type (
 
 	// while (Cond) { Body }
 	WhileStmt struct {
-		Cond Operation
+		Cond *Operation
 		Body *BlockStmt
 		stmt
 	}
@@ -107,7 +111,7 @@ type (
 
 	// if (Cond) { Body } else ElseBody
 	IfStmt struct {
-		Cond     Operation
+		Cond     *Operation
 		Body     *BlockStmt
 		ElseBody Stmt
 		stmt

@@ -120,7 +120,7 @@ func run(code string) int {
 }
 
 func main() {
-	path := "sources/101.miniscala"
+	path := "sources/composition.miniscala"
 
 	program, hadErrors := syntax.Parse(path)
 	if hadErrors {

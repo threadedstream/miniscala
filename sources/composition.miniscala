@@ -1,0 +1,19 @@
+def fib(n: Int): Int {
+    if (n <= 1) {
+        return 1
+    }
+
+    return fib(n - 1) + fib(n - 2)
+}
+
+def fac(n: Int): Int {
+    if (n == 0) {
+        return 1
+    }
+
+    return n * fac(n - 1)
+}
+
+def main(): Unit {
+    print(to_string(fac(fib(5)))) // outputs 40320
+}

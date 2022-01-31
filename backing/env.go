@@ -68,6 +68,7 @@ func BaseTypeEnv() SymbolTable {
 	var symTable = SEmpty()
 
 	SEnter(symTable, SSymbol("Int"), Int)
+	SEnter(symTable, SSymbol("String"), String)
 	SEnter(symTable, SSymbol("Function"), Function)
 	SEnter(symTable, SSymbol("Unit"), Unit)
 	SEnter(symTable, SSymbol("Float"), Float)

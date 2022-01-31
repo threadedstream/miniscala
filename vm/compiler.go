@@ -103,7 +103,7 @@ func (c *compiler) compileVarDeclStmt(stmt syntax.Stmt) {
 
 func (c *compiler) compileIfStmt(stmt syntax.Stmt) {
 	ifStmt := stmt.(*syntax.IfStmt)
-	c.compileExpr(&ifStmt.Cond)
+	c.compileExpr(ifStmt.Cond)
 	jmpIfFalseInstr := &InstrJmpIfFalse{}
 	c.code = append(c.code, jmpIfFalseInstr)
 	priorCodeLen := len(c.code)
@@ -127,7 +127,7 @@ func (c *compiler) compileAssignment(stmt syntax.Stmt) {
 func (c *compiler) compileWhileStmt(stmt syntax.Stmt) {
 	whileStmt := stmt.(*syntax.WhileStmt)
 	unCondJmpInit := len(c.code)
-	c.compileExpr(&whileStmt.Cond)
+	c.compileExpr(whileStmt.Cond)
 	jmpIfFalseInstr := &InstrJmpIfFalse{}
 	c.code = append(c.code, jmpIfFalseInstr)
 	priorCodeLen := len(c.code)
@@ -242,7 +242,7 @@ func (c *compiler) compileOperation(expr syntax.Expr) {
 	switch operation.Op {
 	default:
 		// TODO(threadedstream): handle an error
-		panic("")
+		panic("unknown operator")
 	case syntax.Plus:
 		c.code = append(c.code, &InstrAdd{})
 	case syntax.Minus:
@@ -261,6 +261,8 @@ func (c *compiler) compileOperation(expr syntax.Expr) {
 		c.code = append(c.code, &InstrLessThanOrEqual{})
 	case syntax.Equal:
 		c.code = append(c.code, &InstrEqual{})
+	case syntax.Mod:
+		c.code = append(c.code, &InstrMod{})
 	}
 }
 

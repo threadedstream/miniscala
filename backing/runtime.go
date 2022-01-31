@@ -14,12 +14,15 @@ func IsRuntimeCall(name string) bool {
 	}
 }
 
-func DispatchRuntimeFuncCall(name string, args ...Value) {
+func DispatchRuntimeFuncCall(name string, args ...Value) Value {
 	switch name {
 	case "print":
 		callPrint(args[0])
 	case "to_string":
-		callToString(args[0])
+		return callToString(args[0])
+	}
+	return Value{
+		ValueType: Unit,
 	}
 }
 

@@ -1,0 +1,11 @@
+
+def abs(x: Int): Int {
+    if (x < 0) {
+        return x * -1
+    }
+    return x
+}
+
+def main(): Unit {
+    print(to_string(abs(-5)))
+}

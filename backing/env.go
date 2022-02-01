@@ -73,6 +73,7 @@ func BaseTypeEnv() SymbolTable {
 	SEnter(symTable, SSymbol("Unit"), Unit)
 	SEnter(symTable, SSymbol("Float"), Float)
 	SEnter(symTable, SSymbol("Bool"), Bool)
+	SEnter(symTable, SSymbol("Array"), Array)
 	SEnter(symTable, SSymbol("Null"), Null)
 	SEnter(symTable, SSymbol("Any"), Any)
 	SEnter(symTable, SSymbol("Undefined"), Undefined)
@@ -82,7 +83,7 @@ func BaseTypeEnv() SymbolTable {
 
 func BaseValueEnv() SymbolTable {
 	var symTable = SEmpty()
-
+	// print(val: String)
 	SEnter(
 		symTable, SSymbol("print"), MakeFunEntry(
 			"print",
@@ -90,13 +91,40 @@ func BaseValueEnv() SymbolTable {
 			OutermostLevel(),
 			Unit),
 	)
-
+	// to_string(x: Any): String
 	SEnter(
 		symTable, SSymbol("to_string"), MakeFunEntry(
 			"to_string",
 			[]ValueType{Any},
 			OutermostLevel(),
 			String,
+		),
+	)
+	// array_new(num_of_elements: Int, type_of_elements: String)
+	SEnter(
+		symTable, SSymbol("array_new"), MakeFunEntry(
+			"array_new",
+			[]ValueType{Int, String},
+			OutermostLevel(),
+			Array,
+		),
+	)
+	// array_set(arr_ptr: Array, idx: Int, value: Any)
+	SEnter(
+		symTable, SSymbol("array_set"), MakeFunEntry(
+			"array_set",
+			[]ValueType{Array, Int, Any},
+			OutermostLevel(),
+			Unit,
+		),
+	)
+	// array_get(arr_ptr: Array, idx: Int): Any
+	SEnter(
+		symTable, SSymbol("array_get"), MakeFunEntry(
+			"array_get",
+			[]ValueType{Array, Int},
+			OutermostLevel(),
+			Any,
 		),
 	)
 

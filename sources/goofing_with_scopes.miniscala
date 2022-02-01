@@ -1,0 +1,11 @@
+// testing scopes, which has been a real pain in the but during the whole project's lifetime
+
+// it's supposed to complain about undefined n
+def f(x: Int): Unit {
+    print(to_string(n))
+}
+
+def main(): Unit {
+    val n = 20
+    f(28)
+}

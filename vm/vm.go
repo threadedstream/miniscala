@@ -28,6 +28,7 @@ func NewVM(program *syntax.Program) *VM {
 	comp.compile(program)
 	vm := new(VM)
 	vm.chunk = lookupChunk("main", true, vm.abort)
+	vm.chunk.localVars = make(map[string]backing.Value)
 	vm.ip = 0
 	vm.nestingLevel = 0
 	return vm
@@ -88,8 +89,8 @@ func (vm *VM) Run() {
 		case *InstrLoadRef:
 			loadArg := vm.chunk.instrStream[oldIp].(*InstrLoadRef)
 			// TODO(threadedstream): there's a huge hole in scoping. Consider fixing it
-			value := backing.SLook(backing.Venv, backing.SSymbol(loadArg.RefName))
-			if value == nil {
+			value, ok := vm.chunk.localVars[loadArg.RefName]
+			if !ok {
 				// very likely that the desired value resides in argument pool, just pull that out of there
 				value, ok := vm.chunk.argPool[loadArg.RefName]
 				if !ok {
@@ -98,7 +99,7 @@ func (vm *VM) Run() {
 				vm.push(value)
 				continue
 			}
-			vm.push(value.(backing.Value))
+			vm.push(value)
 		case *InstrGreaterThan:
 			var boolValue backing.Value
 			secondOperand := vm.pop()
@@ -305,7 +306,7 @@ func (vm *VM) Run() {
 			vm.chunk = chunk
 			vm.nestingLevel++
 			vm.ip = 0
-			// TODO(threadedstream): get rid of this
+			vm.chunk.localVars = make(map[string]backing.Value)
 			vm.chunk.argPool = make(map[string]backing.Value)
 			for i := 0; i < len(call.ArgNames); i++ {
 				value := vm.pop()
@@ -318,6 +319,7 @@ func (vm *VM) Run() {
 				vm.normalexit()
 			}
 			vm.callChain[vm.nestingLevel] = ChainEntry{}
+			vm.chunk.localVars = nil
 			vm.nestingLevel--
 			if vm.chunk.doesReturn {
 				returnValue = vm.pop()
@@ -328,7 +330,8 @@ func (vm *VM) Run() {
 		case *InstrSetLocal:
 			setLocalInstr := vm.chunk.instrStream[oldIp].(*InstrSetLocal)
 			valueToAssign := vm.pop()
-			backing.SEnter(backing.Venv, backing.SSymbol(setLocalInstr.Name), valueToAssign)
+			vm.chunk.localVars[setLocalInstr.Name] = valueToAssign
+			//backing.SEnter(backing.Venv, backing.SSymbol(setLocalInstr.Name), valueToAssign)
 		}
 	}
 }

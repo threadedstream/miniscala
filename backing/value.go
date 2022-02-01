@@ -24,12 +24,27 @@ type (
 		DefDeclStmt *syntax.DefDeclStmt
 		ReturnType  ValueType
 	}
+
+	ArrayValue struct {
+		Arr         []Value
+		ElementType ValueType
+	}
 )
 
 func NullValue() Value {
 	return Value{
 		ValueType: Null,
 	}
+}
+
+func ArrayOfValues(num int, ty ValueType) []Value {
+	var arr []Value
+	for i := 0; i < num; i++ {
+		arr = append(arr, Value{
+			ValueType: ty,
+		})
+	}
+	return arr
 }
 
 func (v Value) AsFloat() float64 {
@@ -67,6 +82,10 @@ func (v Value) IsInt() bool {
 	//_, ok := v.Value.(int)
 	//return ok
 	return v.ValueType == Int
+}
+
+func (v Value) IsArray() bool {
+	return v.ValueType == Array
 }
 
 // thought it might be worthwhile putting it here

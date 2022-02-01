@@ -16,16 +16,20 @@ def abs_f(x: Float): Float {
 }
 
 def sqrt(a: Float, x: Float, eps: Float): Float {
+    // 8 * 8 - 121 = 64 - 121 = 57
+    // 0.5 * (8 + 121 / 8) = 0
     if (abs_f((x * x) - a) < eps) {
         return x
     }
+    // a
+    // 0.5 * (x + a / x)
+    // eps
     return sqrt(a, 0.5 * (x + a / x), eps)
 }
 
 def main(): Unit {
     val eps = 0.0001
-    val a = 9.0
-    val x = 3.0
-    val a_i = 9
+    val a = 121.0
+    val x = 8.0
     print(to_string(sqrt(a, x, eps)))
 }

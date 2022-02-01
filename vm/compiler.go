@@ -143,8 +143,10 @@ func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 	defStmt := stmt.(*syntax.DefDeclStmt)
 	chunk := newChunk(nil, defStmt.Name.Value)
 
+	// TODO(threadedstream): consider using anything other than map to store
+	// argument names. The slice seems a pretty suitable choice, but where to store it?
 	for _, param := range defStmt.ParamList {
-		chunk.argPool[param.Name.Value] = backing.NullValue()
+		chunk.argNames = append(chunk.argNames, param.Name.Value)
 	}
 
 	chunk.doesReturn = defStmt.ReturnType.(*syntax.Name).Value != "Unit"
@@ -228,9 +230,7 @@ func (c *compiler) compileCall(expr syntax.Expr) {
 		c.compileExpr(arg)
 	}
 
-	for k, _ := range chunk.argPool {
-		callInstr.ArgNames = append(callInstr.ArgNames, k)
-	}
+	callInstr.ArgNames = chunk.argNames
 
 	c.code = append(c.code, callInstr)
 }

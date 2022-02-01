@@ -350,7 +350,6 @@ func typecheckValDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 		typecheckError("[%d:%d] name %s is reserved\n", errorPos.Line, errorPos.Column, valDeclStmt.Name.Value)
 		return
 	}
-	// TODO(threadedstream): there's a room for a constant folding optimization
 	valueType := typecheckExpr(valDeclStmt.Rhs, level)
 	backing.SEnter(
 		*venv, backing.SSymbol(valDeclStmt.Name.Value), backing.MakeVarEntry(

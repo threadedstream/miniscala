@@ -12,6 +12,8 @@ var (
 type Chunk struct {
 	funcName    string
 	instrStream []Instruction
+	argNames    []string // temporary solution
+	localVars   map[string]backing.Value
 	argPool     map[string]backing.Value
 	doesReturn  bool
 }
@@ -19,7 +21,8 @@ type Chunk struct {
 func newChunk(code []Instruction, name string) Chunk {
 	chunk := Chunk{}
 	chunk.instrStream = code
-	chunk.argPool = make(map[string]backing.Value)
+	//chunk.argPool = make(map[string]backing.Value)
+	chunk.argNames = make([]string, 0)
 	chunk.funcName = name
 	return chunk
 }

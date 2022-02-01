@@ -246,8 +246,8 @@ func Div(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 		}
 	case v1.IsInt() && v2.IsInt():
 		return Value{
-			Value:     v1.AsInt() / v2.AsInt(),
-			ValueType: Int,
+			Value:     float64(v1.AsInt()) / float64(v2.AsInt()),
+			ValueType: Float,
 		}
 	case v1.IsFloat() && v2.IsInt():
 		return Value{

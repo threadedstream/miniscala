@@ -87,6 +87,7 @@ func (vm *VM) Run() {
 			vm.push(load.Value)
 		case *InstrLoadRef:
 			loadArg := vm.chunk.instrStream[oldIp].(*InstrLoadRef)
+			// TODO(threadedstream): there's a huge hole in scoping. Consider fixing it
 			value := backing.SLook(backing.Venv, backing.SSymbol(loadArg.RefName))
 			if value == nil {
 				// very likely that the desired value resides in argument pool, just pull that out of there

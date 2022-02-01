@@ -481,7 +481,7 @@ func (p *Parser) stmts() []Stmt {
 
 func (p *Parser) expr() Node {
 	switch p.curr().(type) {
-	case *TokenNumber, *TokenOpenParen, *TokenOpenBrace, *TokenIdent, *TokenString:
+	case *TokenLogicalNot, *TokenMinus, *TokenNumber, *TokenOpenParen, *TokenOpenBrace, *TokenIdent, *TokenString:
 		return p.binOp(0)
 	default:
 		errPos := p.curr().Pos()

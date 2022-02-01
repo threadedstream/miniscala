@@ -238,7 +238,9 @@ func (c *compiler) compileCall(expr syntax.Expr) {
 func (c *compiler) compileOperation(expr syntax.Expr) {
 	operation := expr.(*syntax.Operation)
 	c.compileExpr(operation.Lhs)
-	c.compileExpr(operation.Rhs)
+	if operation.Rhs != nil {
+		c.compileExpr(operation.Rhs)
+	}
 	switch operation.Op {
 	default:
 		// TODO(threadedstream): handle an error
@@ -246,6 +248,16 @@ func (c *compiler) compileOperation(expr syntax.Expr) {
 	case syntax.Plus:
 		c.code = append(c.code, &InstrAdd{})
 	case syntax.Minus:
+		if operation.Rhs == nil {
+			// This is a unary minus operator. Currently, unary minus operator is handled
+			// by multiplying the number by -1
+			c.code = append(c.code, &InstrLoadImm{Value: backing.Value{
+				Value:     int64(-1),
+				ValueType: backing.Int,
+			}})
+			c.code = append(c.code, &InstrMul{})
+			break
+		}
 		c.code = append(c.code, &InstrSub{})
 	case syntax.Mul:
 		c.code = append(c.code, &InstrMul{})
@@ -263,6 +275,12 @@ func (c *compiler) compileOperation(expr syntax.Expr) {
 		c.code = append(c.code, &InstrEqual{})
 	case syntax.Mod:
 		c.code = append(c.code, &InstrMod{})
+	case syntax.LogicalAnd:
+		c.code = append(c.code, &InstrLogicalAnd{})
+	case syntax.LogicalOr:
+		c.code = append(c.code, &InstrLogicalOr{})
+	case syntax.LogicalNot:
+		c.code = append(c.code, &InstrLogicalNot{})
 	}
 }
 

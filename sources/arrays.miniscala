@@ -1,3 +1,10 @@
-def main(): Unit {
 
+def fill_arr(arr_ptr: Array): Unit {
+    var x = 0
+}
+
+def main(): Unit {
+    var array = array_new(30, "Int")
+    array_set(array, 0, 50)
+    print(to_string(array_get(array, 0)))
 }

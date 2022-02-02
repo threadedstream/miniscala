@@ -288,9 +288,10 @@ func (vm *VM) Run() {
 			call := vm.chunk.instrStream[oldIp].(*InstrCall)
 			if backing.IsRuntimeCall(call.FuncName) {
 				reservedFuncInfo := backing.SLook(backing.Venv, backing.SSymbol(call.FuncName)).(*backing.EnvEntry)
-				var arguments []backing.Value
-				for _, _ = range reservedFuncInfo.ParamTypes {
-					arguments = append(arguments, vm.pop())
+				var arguments = make([]backing.Value, len(reservedFuncInfo.ParamTypes))
+				for idx, _ := range reservedFuncInfo.ParamTypes {
+					val := vm.pop()
+					arguments[len(reservedFuncInfo.ParamTypes)-idx-1] = val
 				}
 				val := backing.DispatchRuntimeFuncCall(call.FuncName, arguments...)
 				if val.ValueType != backing.Unit {

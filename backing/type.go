@@ -85,6 +85,8 @@ func ValueTypeToStr(valueType ValueType) string {
 		return "Ref"
 	case Null:
 		return "Null"
+	case Array:
+		return "Array"
 	case Undefined:
 		return "Undefined"
 	}

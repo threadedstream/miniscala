@@ -45,18 +45,6 @@ func callToString(val Value) Value {
 	}
 }
 
-func callArraySet(args ...Value) {
-	arrPtr := args[0]
-	idx := args[1]
-	value := args[2]
-
-	assert.Assert(arrPtr.IsArray(), "1st argument to array_set must be an array")
-	assert.Assert(idx.IsInt(), "2nd argument to array_set must be an integer")
-	// TODO(threadedstream): do proper typechecking here, check accordance of type of the value in respect to
-	// the type mandated by arrPtr
-
-}
-
 func callArrayNew(args ...Value) Value {
 	numberOfElements := args[0]
 	typeOfElements := args[1]
@@ -69,12 +57,42 @@ func callArrayNew(args ...Value) Value {
 		Arr:         ArrayOfValues(int(numberOfElements.AsInt()), ty),
 		ElementType: ty,
 	}
+
 	return Value{
 		Value:     arrValue,
 		ValueType: Array,
 	}
 }
 
+func callArraySet(args ...Value) {
+	arrPtr := args[0]
+	idx := args[1]
+	value := args[2]
+
+	assert.Assert(arrPtr.IsArray(), "1st argument to array_set must be an array")
+	assert.Assert(idx.IsInt(), "2nd argument to array_set must be an integer")
+	// TODO(threadedstream): do proper typechecking here, check accordance of type of the value in respect to
+	// the type mandated by arrPtr
+
+	arrValue := arrPtr.Value.(ArrayValue)
+	assert.Assert(
+		value.ValueType == arrValue.ElementType,
+		"array expected type %s, but got %s",
+		ValueTypeToStr(value.ValueType),
+		ValueTypeToStr(arrValue.ElementType),
+	)
+
+	arrValue.Arr[idx.AsInt()] = value
+}
+
 func callArrayGet(args ...Value) Value {
-	return Value{}
+	arrPtr := args[0]
+	idx := args[1]
+
+	assert.Assert(arrPtr.IsArray(), "1st argument to array_get must be an array")
+	assert.Assert(idx.IsInt(), "2nd argument to array_get must be an integer")
+
+	arrValue := arrPtr.Value.(ArrayValue)
+
+	return arrValue.Arr[idx.AsInt()]
 }

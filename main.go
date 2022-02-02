@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	path := "sources/sqrt_newton.miniscala"
+	path := "sources/arrays.miniscala"
 	program, hadErrors := syntax.Parse(path)
 	if hadErrors {
 		return

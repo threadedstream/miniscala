@@ -1,10 +1,24 @@
 
 def fill_arr(arr_ptr: Array): Unit {
     var x = 0
+    val arr_size = array_size(arr_ptr)
+    while (x < arr_size) {
+        array_set(arr_ptr, x, x)
+        x = x + 1
+    }
+}
+
+def print_arr(arr_ptr: Array): Unit {
+    var x = 0
+    val arr_size = array_size(arr_ptr)
+    while (x < arr_size) {
+        print(to_string(array_get(arr_ptr, x)) + " ")
+        x = x + 1
+    }
 }
 
 def main(): Unit {
     var array = array_new(30, "Int")
-    array_set(array, 0, 50)
-    print(to_string(array_get(array, 0)))
+    fill_arr(array)
+    print_arr(array)
 }

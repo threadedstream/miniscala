@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	path := "sources/arrays.miniscala"
+	path := "sources/sort.miniscala"
 	program, hadErrors := syntax.Parse(path)
 	if hadErrors {
 		return
@@ -17,6 +17,7 @@ func main() {
 	if hadErrors {
 		return
 	}
+
 	vmHandle := vm.NewVM(program)
 	vmHandle.Run()
 }

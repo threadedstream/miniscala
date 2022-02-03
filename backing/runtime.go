@@ -9,7 +9,7 @@ func IsRuntimeCall(name string) bool {
 	switch name {
 	default:
 		return false
-	case "print", "to_string", "array_new", "array_set", "array_get":
+	case "print", "to_string", "array_new", "array_set", "array_get", "array_size":
 		return true
 	}
 }
@@ -21,11 +21,13 @@ func DispatchRuntimeFuncCall(name string, args ...Value) Value {
 	case "to_string":
 		return callToString(args[0])
 	case "array_new":
-		return callArrayNew(args...)
+		return callArrayNew(args[0], args[1])
 	case "array_set":
-		callArraySet(args...)
+		callArraySet(args[0], args[1], args[2])
 	case "array_get":
-		return callArrayGet(args...)
+		return callArrayGet(args[0], args[1])
+	case "array_size":
+		return callArraySize(args[0])
 	}
 	return Value{
 		ValueType: Unit,
@@ -34,7 +36,7 @@ func DispatchRuntimeFuncCall(name string, args ...Value) Value {
 
 func callPrint(val Value) {
 	assert.Assert(val.ValueType == String, "print requires string type as an only argument")
-	fmt.Printf("%s", val.Value)
+	fmt.Printf("%s", val.AsString())
 }
 
 func callToString(val Value) Value {
@@ -45,35 +47,34 @@ func callToString(val Value) Value {
 	}
 }
 
-func callArrayNew(args ...Value) Value {
-	numberOfElements := args[0]
-	typeOfElements := args[1]
-
+func callArrayNew(numberOfElements, typeOfElements Value) Value {
 	assert.Assert(numberOfElements.IsInt(), "1st argument to array_new must be an integer")
 	assert.Assert(typeOfElements.IsString(), "2nd argument to array_new must be a string")
-
 	ty := MiniscalaTypeToValueType(typeOfElements.AsString())
 	arrValue := ArrayValue{
 		Arr:         ArrayOfValues(int(numberOfElements.AsInt()), ty),
 		ElementType: ty,
 	}
-
 	return Value{
 		Value:     arrValue,
 		ValueType: Array,
 	}
 }
 
-func callArraySet(args ...Value) {
-	arrPtr := args[0]
-	idx := args[1]
-	value := args[2]
+func callArraySize(arrPtr Value) Value {
+	assert.Assert(arrPtr.IsArray(), "1st argument to array_size must be an array")
+	arrValue := arrPtr.Value.(ArrayValue)
+	return Value{
+		Value:     int64(len(arrValue.Arr)),
+		ValueType: Int,
+	}
+}
 
+func callArraySet(arrPtr, idx, value Value) {
 	assert.Assert(arrPtr.IsArray(), "1st argument to array_set must be an array")
 	assert.Assert(idx.IsInt(), "2nd argument to array_set must be an integer")
 	// TODO(threadedstream): do proper typechecking here, check accordance of type of the value in respect to
 	// the type mandated by arrPtr
-
 	arrValue := arrPtr.Value.(ArrayValue)
 	assert.Assert(
 		value.ValueType == arrValue.ElementType,
@@ -81,18 +82,12 @@ func callArraySet(args ...Value) {
 		ValueTypeToStr(value.ValueType),
 		ValueTypeToStr(arrValue.ElementType),
 	)
-
 	arrValue.Arr[idx.AsInt()] = value
 }
 
-func callArrayGet(args ...Value) Value {
-	arrPtr := args[0]
-	idx := args[1]
-
+func callArrayGet(arrPtr, idx Value) Value {
 	assert.Assert(arrPtr.IsArray(), "1st argument to array_get must be an array")
 	assert.Assert(idx.IsInt(), "2nd argument to array_get must be an integer")
-
 	arrValue := arrPtr.Value.(ArrayValue)
-
 	return arrValue.Arr[idx.AsInt()]
 }

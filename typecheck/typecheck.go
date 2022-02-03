@@ -251,11 +251,12 @@ func typecheckAssignment(stmt syntax.Stmt, level *backing.Level) {
 	if lhsEntry.Immutable {
 		errorPos := assignment.Pos()
 		// reporting the type mismatch issue
-		typecheckError("[%d:%d] %s is immutable, thus non-assignable", errorPos.Line, errorPos.Column, assigneeName)
+		typecheckError("[%d:%d] %v is immutable, thus non-assignable", errorPos.Line, errorPos.Column, assigneeName)
 		return
 	}
 
-	if lhsEntry.ResultType != rhsType {
+	// TODO(threadedstream): rhsType should be resolved during a runtime
+	if !backing.TypesEqual(lhsEntry.ResultType, rhsType) {
 		errorPos := assignment.Pos()
 		typecheckError("[%d:%d] expected to have rhs type %s, but got %s\n",
 			errorPos.Line, errorPos.Column,
@@ -273,14 +274,12 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 		// bravely return at that point, as it panics if entry is nil
 		return backing.Undefined
 	}
-
 	calleeEntry := entry.(*backing.EnvEntry)
 	if calleeEntry.Kind != backing.EntryFun {
 		errorPos := callStmt.Pos()
 		typecheckError("[%d:%d] %s is not a function\n", errorPos.Line, errorPos.Column, callStmt.CalleeName.Value)
 		return backing.Undefined
 	}
-
 	// first, check number of passed parameters
 	if len(calleeEntry.ParamTypes) != len(callStmt.ArgList) {
 		errorPos := callStmt.Pos()
@@ -288,7 +287,6 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 			callStmt.CalleeName.Value, len(calleeEntry.ParamTypes), len(callStmt.ArgList))
 		return backing.Undefined
 	}
-
 	var valueTypes []backing.ValueType
 	for _, arg := range callStmt.ArgList {
 		argType := typecheckExpr(arg, level)
@@ -297,7 +295,6 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 		}
 		valueTypes = append(valueTypes, argType)
 	}
-
 	for idx, paramType := range calleeEntry.ParamTypes {
 		if !backing.TypesEqual(paramType, valueTypes[idx]) {
 			errorPos := callStmt.Pos()
@@ -306,7 +303,6 @@ func typecheckCall(stmt syntax.Stmt, level *backing.Level) backing.ValueType {
 			return backing.Undefined
 		}
 	}
-
 	return calleeEntry.ResultType
 }
 

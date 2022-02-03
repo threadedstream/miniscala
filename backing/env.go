@@ -66,7 +66,6 @@ func MakeFunEntry(label string, paramTypes []ValueType, level *Level, resultType
 
 func BaseTypeEnv() SymbolTable {
 	var symTable = SEmpty()
-
 	SEnter(symTable, SSymbol("Int"), Int)
 	SEnter(symTable, SSymbol("String"), String)
 	SEnter(symTable, SSymbol("Function"), Function)
@@ -77,7 +76,6 @@ func BaseTypeEnv() SymbolTable {
 	SEnter(symTable, SSymbol("Null"), Null)
 	SEnter(symTable, SSymbol("Any"), Any)
 	SEnter(symTable, SSymbol("Undefined"), Undefined)
-
 	return symTable
 }
 
@@ -127,6 +125,13 @@ func BaseValueEnv() SymbolTable {
 			Any,
 		),
 	)
-
+	// array_size(arr_ptr: Array): Int
+	SEnter(
+		symTable, SSymbol("array_size"), MakeFunEntry(
+			"array_size",
+			[]ValueType{Array},
+			OutermostLevel(),
+			Int),
+	)
 	return symTable
 }

@@ -323,9 +323,22 @@ func (cs *CharScanner) tokenizeNumber() *TokenNumber {
 func (cs *CharScanner) tokenizeString() *TokenString {
 	var tokenValue []rune
 	for cs.s.Peek() != '"' {
+		// handling escape sequences
+		if cs.s.Peek() == '\\' {
+			cs.s.Next()
+			switch cs.s.Peek() {
+			case 'n':
+				tokenValue = append(tokenValue, '\n')
+			case 'r':
+				tokenValue = append(tokenValue, '\r')
+			}
+			cs.s.Next()
+			continue
+		}
 		tokenValue = append(tokenValue, cs.s.Peek())
 		cs.s.Next()
 	}
+
 	// eat the trailing '"'
 	cs.s.Next()
 

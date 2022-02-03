@@ -387,7 +387,6 @@ func (p *Parser) whileStmt() *WhileStmt {
 	whileStmt.Cond = p.expr().(*Operation)
 	p.consume(&TokenCloseParen{})
 	whileStmt.Body = p.blockStmt()
-
 	return whileStmt
 }
 

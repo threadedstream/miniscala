@@ -226,6 +226,7 @@ func (cs *CharScanner) tokenize() Token {
 		pos := cs.s.Pos()
 		cs.s.Next()
 		if cs.s.Peek() == '&' {
+			cs.s.Next()
 			return &TokenLogicalAnd{
 				tok: tok{
 					pos: pos,

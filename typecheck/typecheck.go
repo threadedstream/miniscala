@@ -147,7 +147,11 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 	case syntax.Plus:
 		switch {
 		default:
-			return backing.Undefined, false
+			if t1 != backing.Any && t2 != backing.Any {
+				return backing.Undefined, false
+			}
+			// ad-hoc solution to a complicated problem
+			return backing.Any, true
 		case t1 == backing.Float && t2 == backing.Int:
 			return backing.Float, true
 		case t1 == backing.Int && t2 == backing.Float:

@@ -24,6 +24,42 @@ const (
 	InvalidOperator    = -1
 )
 
+func OperatorToString(op Operator) string {
+	switch op {
+	default:
+		return "?"
+	case Plus:
+		return "+"
+	case Minus:
+		return "-"
+	case Mul:
+		return "*"
+	case Div:
+		return "/"
+	case Mod:
+		return "%"
+	case GreaterThan:
+		return ">"
+	case GreaterThanOrEqual:
+		return ">="
+	case LessThan:
+		return "<"
+	case LessThanOrEqual:
+		return "<="
+	case Equal:
+		return "=="
+	case NotEqual:
+		return "!="
+	case LogicalAnd:
+		return "&&"
+	case LogicalOr:
+		return "||"
+	case LogicalNot:
+		return "!"
+	}
+
+}
+
 type Node interface {
 	Pos() scanner.Position
 }

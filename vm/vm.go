@@ -83,6 +83,14 @@ func (vm *VM) Run() {
 			secondOperand := vm.pop()
 			firstOperand := vm.pop()
 			vm.push(backing.Mod(firstOperand, secondOperand, nil, backing.Vm))
+		case *InstrLogicalAnd:
+			secondOperand := vm.pop()
+			firstOperand := vm.pop()
+			vm.push(backing.LogicalAnd(firstOperand, secondOperand))
+		case *InstrLogicalOr:
+			secondOperand := vm.pop()
+			firstOperand := vm.pop()
+			vm.push(backing.LogicalOr(firstOperand, secondOperand))
 		case *InstrLoadImm:
 			load := vm.chunk.instrStream[oldIp].(*InstrLoadImm)
 			vm.push(load.Value)

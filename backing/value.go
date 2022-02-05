@@ -295,3 +295,33 @@ func Mod(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 		}
 	}
 }
+
+func LogicalAnd(v1, v2 Value) Value {
+	switch {
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	case v1.IsBool() && v2.IsBool():
+		return Value{
+			Value:     v1.AsBool() && v2.AsBool(),
+			ValueType: Bool,
+		}
+	}
+}
+
+func LogicalOr(v1, v2 Value) Value {
+	switch {
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	case v1.IsBool() && v2.IsBool():
+		return Value{
+			Value:     v1.AsBool() || v2.AsBool(),
+			ValueType: Bool,
+		}
+	}
+}

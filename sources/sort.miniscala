@@ -64,15 +64,17 @@ def print_arr(arr_ptr: Array): Unit {
 
 def main(): Unit {
     var array = array_new(10, "Int")
-    val limit = 10
+    val arr_size = array_size(array)
     var start = 0
-    while (start < limit) {
-        array_set(array, start, limit - start)
+    while (start < arr_size) {
+        array_set(array, start, arr_size - start)
         start = start + 1
     }
     print("Before sorting: \n")
     print_arr(array)
-    bubble_sort(array)
+    quicksort(array, 0, arr_size - 1)
+    // uncomment the line below if you like the bubble sort more :)
+    //bubble_sort(array)
     print("After sorting: \n")
     print_arr(array)
 }

@@ -124,15 +124,16 @@ func typecheckExpr(expr syntax.Expr, level *backing.Level) backing.ValueType {
 		resultingType, compatible := typesCompatible(lhsType, rhsType, operation.Op)
 		if !compatible {
 			errorPos := operation.Pos()
-			typecheckError("[%d:%d] types %s and %s are not compatible\n",
+			typecheckError("[%d:%d] types %s and %s are not compatible under %s operation\n",
 				errorPos.Line, errorPos.Column,
 				backing.ValueTypeToStr(lhsType),
-				backing.ValueTypeToStr(rhsType))
+				backing.ValueTypeToStr(rhsType),
+				syntax.OperatorToString(operation.Op))
 		}
 		return resultingType
 
-	// although call is the statement, we might implicitly treat it
-	// as an expression in that particular case
+	// although call is the statement, we may implicitly treat it
+	// as if it were an expression in that particular case
 	case *syntax.Call:
 		return typecheckCall(expr, level)
 	}
@@ -150,7 +151,6 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 			if t1 != backing.Any && t2 != backing.Any {
 				return backing.Undefined, false
 			}
-			// ad-hoc solution to a complicated problem
 			return backing.Any, true
 		case t1 == backing.Float && t2 == backing.Int:
 			return backing.Float, true
@@ -166,7 +166,10 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 	case syntax.Minus, syntax.Mul, syntax.Div:
 		switch {
 		default:
-			return backing.Undefined, false
+			if t1 != backing.Any && t2 != backing.Any {
+				return backing.Undefined, false
+			}
+			return backing.Any, true
 		case t1 == backing.Float && t2 == backing.Int:
 			return backing.Float, true
 		case t1 == backing.Int && t2 == backing.Float:
@@ -182,7 +185,10 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 
 		switch {
 		default:
-			return backing.Undefined, false
+			if t1 != backing.Any && t2 != backing.Any {
+				return backing.Undefined, false
+			}
+			return backing.Any, true
 		case t1 == backing.Float && t2 == backing.Float:
 			return backing.Bool, true
 		case t1 == backing.Float && t2 == backing.Int:
@@ -199,9 +205,32 @@ func typesCompatible(t1, t2 backing.ValueType, op syntax.Operator) (backing.Valu
 	case syntax.Mod:
 		switch {
 		default:
-			return backing.Undefined, false
+			if t1 != backing.Any && t2 != backing.Any {
+				return backing.Undefined, false
+			}
+			return backing.Any, true
 		case t1 == backing.Int && t2 == backing.Int:
 			return backing.Int, true
+		}
+	case syntax.LogicalAnd:
+		switch {
+		default:
+			if t1 != backing.Any && t2 != backing.Any {
+				return backing.Undefined, false
+			}
+			return backing.Any, true
+		case t1 == backing.Bool && t2 == backing.Bool:
+			return backing.Bool, true
+		}
+	case syntax.LogicalOr:
+		switch {
+		default:
+			if t1 != backing.Any && t2 != backing.Any {
+				return backing.Undefined, false
+			}
+			return backing.Any, true
+		case t1 == backing.Bool && t2 == backing.Bool:
+			return backing.Bool, true
 		}
 	}
 }
@@ -247,18 +276,14 @@ func typecheckAssignment(stmt syntax.Stmt, level *backing.Level) {
 		)
 		return
 	}
-
 	lhsEntry := lhs.(*backing.EnvEntry)
-
 	rhsType := typecheckExpr(assignment.Rhs, level)
-
 	if lhsEntry.Immutable {
 		errorPos := assignment.Pos()
 		// reporting the type mismatch issue
 		typecheckError("[%d:%d] %v is immutable, thus non-assignable", errorPos.Line, errorPos.Column, assigneeName)
 		return
 	}
-
 	// TODO(threadedstream): rhsType should be resolved during a runtime
 	if !backing.TypesEqual(lhsEntry.ResultType, rhsType) {
 		errorPos := assignment.Pos()
@@ -364,7 +389,7 @@ func typecheckValDeclStmt(stmt syntax.Stmt, level *backing.Level) {
 func typecheckIfStmt(stmt syntax.Stmt, level *backing.Level) {
 	ifStmt := stmt.(*syntax.IfStmt)
 	condValueType := typecheckExpr(ifStmt.Cond, level)
-	if condValueType != backing.Bool {
+	if condValueType != backing.Bool && condValueType != backing.Any {
 		errorPos := ifStmt.Pos()
 		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)
 		return
@@ -378,7 +403,7 @@ func typecheckIfStmt(stmt syntax.Stmt, level *backing.Level) {
 func typecheckWhileStmt(stmt syntax.Stmt, level *backing.Level) {
 	whileStmt := stmt.(*syntax.WhileStmt)
 	condValueType := typecheckExpr(whileStmt.Cond, level)
-	if condValueType != backing.Bool {
+	if condValueType != backing.Bool && condValueType != backing.Any {
 		errorPos := whileStmt.Pos()
 		typecheckError("[%d:%d] condition is not of bool type\n", errorPos.Line, errorPos.Column)
 		return

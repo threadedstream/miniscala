@@ -23,4 +23,4 @@ Voici un exemple of the program written in miniscala
   print(fac(fib(5))) // outputs 40320
 ```
 
-Basically, that's all to it. 
+For more examples, refer to source files located under the "sources" folder. 

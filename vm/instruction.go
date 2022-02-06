@@ -25,6 +25,22 @@ type (
 		instr
 	}
 
+	InstrMod struct {
+		instr
+	}
+
+	InstrLogicalAnd struct {
+		instr
+	}
+
+	InstrLogicalOr struct {
+		instr
+	}
+
+	InstrLogicalNot struct {
+		instr
+	}
+
 	InstrLoadImm struct {
 		backing.Value
 		instr

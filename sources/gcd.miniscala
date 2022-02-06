@@ -1,0 +1,16 @@
+
+def gcd(m: Int, n: Int): Int {
+    if (m > n) {
+        return gcd(n, m)
+    }
+
+    if (n % m == 0) {
+        return m
+    }
+
+    return gcd(n % m, m)
+}
+
+def main(): Unit {
+    print(to_string(gcd(48, 36))) // outputs 12
+}

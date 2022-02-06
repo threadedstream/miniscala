@@ -1,0 +1,80 @@
+def swap(arr_ptr: Array, i: Int, j: Int): Unit {
+    val temp = array_get(arr_ptr, i)
+    array_set(arr_ptr, i, array_get(arr_ptr, j))
+    array_set(arr_ptr, j, temp)
+}
+
+def quicksort(arr_ptr: Array, lo: Int, hi: Int): Unit {
+    var pivot = 0
+    var i = 0
+    var j = 0
+    if (lo < hi) {
+        pivot = lo
+        i = lo
+        j = hi
+        var pivot_element = array_get(arr_ptr, pivot)
+        while (i < j) {
+            while ((array_get(arr_ptr, i) <= pivot_element) && (i < hi)) {
+                i = i + 1
+            }
+            while (array_get(arr_ptr, j) > pivot_element) {
+                j = j - 1
+            }
+            if (i < j) {
+                swap(arr_ptr, i, j)
+            }
+        }
+        swap(arr_ptr, pivot, j)
+        quicksort(arr_ptr, lo, j - 1)
+        quicksort(arr_ptr, j + 1, hi)
+    }
+}
+
+def bubble_sort(arr_ptr: Array): Unit {
+    var i = 0
+    var j = 0
+    var lhs = 0
+    var rhs = 0
+    val arr_size = array_size(arr_ptr)
+    while (i < arr_size) {
+        while (j < arr_size - 1) {
+            lhs = array_get(arr_ptr, j)
+            rhs = array_get(arr_ptr, j + 1)
+            if (lhs > rhs) {
+                // swap 'em up
+                swap(arr_ptr, j, j+1)
+            }
+            j = j + 1
+        }
+        i = i + 1
+        j = 0
+    }
+}
+
+
+def print_arr(arr_ptr: Array): Unit {
+    var x = 0
+    val arr_size = array_size(arr_ptr)
+    while (x < arr_size) {
+        print(to_string(array_get(arr_ptr, x)) + " ")
+        x = x + 1
+    }
+    print("\n")
+}
+
+def main(): Unit {
+    var array = array_new(10, "Int")
+    val arr_size = array_size(array)
+    var start = 0
+    while (start < arr_size) {
+        array_set(array, start, arr_size - start)
+        start = start + 1
+    }
+    print("Before sorting: \n")
+    print_arr(array)
+    quicksort(array, 0, arr_size - 1)
+    // uncomment the line below if you like the bubble sort more :)
+    //bubble_sort(array)
+    print("After sorting: \n")
+    print_arr(array)
+}

@@ -46,7 +46,10 @@ func (p *Parser) next() Token {
 }
 
 func (p *Parser) curr() Token {
-	return p.tokenStream[p.currIdx]
+	if p.currIdx < len(p.tokenStream) {
+		return p.tokenStream[p.currIdx]
+	}
+	return &TokenEOF{}
 }
 
 func (p *Parser) consume(token Token) {
@@ -133,14 +136,40 @@ func (p *Parser) stmt() Stmt {
 	}
 }
 
+func (p *Parser) unary() Node {
+	operation := new(Operation)
+	switch p.curr().(type) {
+	default:
+		return operation
+	case *TokenMinus:
+		operation.Op = tokenToOperator(p.curr())
+		p.next()
+		operation.Lhs = p.atom()
+		return operation
+	case *TokenLogicalNot:
+		operation.Op = tokenToOperator(p.curr())
+		p.next()
+		operation.Lhs = p.atom()
+		return operation
+	}
+}
+
 func (p *Parser) atom() Node {
 	switch p.curr().(type) {
+	case *TokenMinus, *TokenLogicalNot:
+		return p.unary()
 	case *TokenNumber:
 		tokenNum := p.curr().(*TokenNumber)
 		p.consume(&TokenNumber{})
+		var kind LitKind
+		if tokenNum.kind == integer {
+			kind = IntLit
+		} else {
+			kind = FloatLit
+		}
 		return &BasicLit{
 			Value: tokenNum.value,
-			Kind:  FloatLit,
+			Kind:  kind,
 		}
 	case *TokenString:
 		tokenString := p.curr().(*TokenString)
@@ -355,10 +384,9 @@ func (p *Parser) whileStmt() *WhileStmt {
 	var whileStmt = &WhileStmt{}
 	p.consume(&TokenWhile{})
 	p.consume(&TokenOpenParen{})
-	whileStmt.Cond = p.cond()
+	whileStmt.Cond = p.expr().(*Operation)
 	p.consume(&TokenCloseParen{})
 	whileStmt.Body = p.blockStmt()
-
 	return whileStmt
 }
 
@@ -366,7 +394,7 @@ func (p *Parser) ifStmt() *IfStmt {
 	var ifStmt = &IfStmt{}
 	p.consume(&TokenIf{})
 	p.consume(&TokenOpenParen{})
-	ifStmt.Cond = p.cond()
+	ifStmt.Cond = p.expr().(*Operation)
 	p.consume(&TokenCloseParen{})
 	ifStmt.Body = p.blockStmt()
 	if p.match(&TokenElse{}) {
@@ -452,7 +480,7 @@ func (p *Parser) stmts() []Stmt {
 
 func (p *Parser) expr() Node {
 	switch p.curr().(type) {
-	case *TokenNumber, *TokenOpenParen, *TokenOpenBrace, *TokenIdent, *TokenString:
+	case *TokenLogicalNot, *TokenMinus, *TokenNumber, *TokenOpenParen, *TokenOpenBrace, *TokenIdent, *TokenString:
 		return p.binOp(0)
 	default:
 		errPos := p.curr().Pos()
@@ -491,13 +519,27 @@ func Parse(path string) (*Program, bool) {
 	return program, parser.hadErrors
 }
 
+// precedence of operators, the higher precedence the tighter binding
+// stolen from C
 func prec(token Token) int {
 	assert.Assert(IsOperator(token), "should be an operator")
 	switch token.(type) {
 	default:
-		return 2
-	case *TokenPlus, *TokenMinus:
+		return 0
+	case *TokenLogicalOr:
 		return 1
+	case *TokenLogicalAnd:
+		return 2
+	case *TokenEqual, *TokenNotEqual:
+		return 3
+	case *TokenGreaterThan, *TokenGreaterThanOrEqual, *TokenLessThan, *TokenLessThanOrEqual:
+		return 4
+	case *TokenPlus, *TokenMinus:
+		return 5
+	case *TokenMul, *TokenDiv, *TokenMod:
+		return 6
+	case *TokenLogicalNot:
+		return 7
 	}
 }
 
@@ -506,7 +548,8 @@ func assoc(token Token) AssociativityType {
 	switch token.(type) {
 	default:
 		return RightAssociative
-	case *TokenPlus, *TokenMinus, *TokenMul, *TokenDiv:
+	case *TokenPlus, *TokenMinus, *TokenMul, *TokenDiv, *TokenGreaterThan, *TokenGreaterThanOrEqual,
+		*TokenLessThan, *TokenLessThanOrEqual, *TokenEqual, *TokenNotEqual, *TokenLogicalAnd, *TokenLogicalOr:
 		return LeftAssociative
 	}
 }
@@ -516,7 +559,9 @@ func IsOperator(token Token) bool {
 	default:
 		return false
 	// TODO(threadedstream): add comparison operators
-	case *TokenPlus, *TokenMinus, *TokenMul, *TokenDiv:
+	case *TokenPlus, *TokenMinus, *TokenMul, *TokenDiv, *TokenMod, *TokenGreaterThan,
+		*TokenGreaterThanOrEqual, *TokenLessThan, *TokenLessThanOrEqual, *TokenEqual, *TokenNotEqual,
+		*TokenLogicalAnd, *TokenLogicalOr, *TokenLogicalNot:
 		return true
 	}
 }
@@ -529,6 +574,10 @@ func tokenToOperator(token Token) Operator {
 		return Minus
 	case *TokenMul:
 		return Mul
+	case *TokenDiv:
+		return Div
+	case *TokenMod:
+		return Mod
 	case *TokenGreaterThan:
 		return GreaterThan
 	case *TokenGreaterThanOrEqual:
@@ -541,6 +590,12 @@ func tokenToOperator(token Token) Operator {
 		return Equal
 	case *TokenNotEqual:
 		return NotEqual
+	case *TokenLogicalNot:
+		return LogicalNot
+	case *TokenLogicalAnd:
+		return LogicalAnd
+	case *TokenLogicalOr:
+		return LogicalOr
 	default:
 		return InvalidOperator
 	}

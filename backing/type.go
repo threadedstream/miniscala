@@ -10,6 +10,7 @@ const (
 	String
 	Unit
 	Bool
+	Array
 	Function
 	Ref
 	Any
@@ -37,6 +38,8 @@ func MiniscalaTypeToValueType(typ string) ValueType {
 		return Unit
 	case "Bool":
 		return Bool
+	case "Array":
+		return Array
 	}
 }
 
@@ -82,6 +85,10 @@ func ValueTypeToStr(valueType ValueType) string {
 		return "Ref"
 	case Null:
 		return "Null"
+	case Array:
+		return "Array"
+	case Any:
+		return "Any"
 	case Undefined:
 		return "Undefined"
 	}

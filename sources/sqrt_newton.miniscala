@@ -1,0 +1,35 @@
+// (|x − a| < eps → x,T → sqrt (a, 1/2*(x + a / x), eps)) borrowed from John McCarthy paper
+// entitled "Recursive Functions of Symbolic Expressions and Their Computation by Machine, Part I"
+
+def abs_i(x: Int): Int {
+   if (x < 0) {
+        return x * -1
+   }
+   return x
+}
+
+def abs_f(x: Float): Float {
+    if (x < 0) {
+        return x * -1
+    }
+    return x
+}
+
+def sqrt(a: Float, x: Float, eps: Float): Float {
+    // 8 * 8 - 121 = 64 - 121 = 57
+    // 0.5 * (8 + 121 / 8) = 0
+    if (abs_f((x * x) - a) < eps) {
+        return x
+    }
+    // a
+    // 0.5 * (x + a / x)
+    // eps
+    return sqrt(a, 0.5 * (x + a / x), eps)
+}
+
+def main(): Unit {
+    val eps = 0.0001
+    val a = 121.0
+    val x = 8.0
+    print(to_string(sqrt(a, x, eps)))
+}

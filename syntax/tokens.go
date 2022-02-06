@@ -2,6 +2,13 @@ package syntax
 
 import "text/scanner"
 
+type numberKind int
+
+const (
+	integer numberKind = iota
+	float
+)
+
 type Token interface {
 	Pos() scanner.Position
 }
@@ -67,6 +74,18 @@ type (
 		tok
 	}
 
+	TokenLogicalAnd struct {
+		tok
+	}
+
+	TokenLogicalOr struct {
+		tok
+	}
+
+	TokenLogicalNot struct {
+		tok
+	}
+
 	TokenOpenBrace struct {
 		tok
 	}
@@ -99,6 +118,10 @@ type (
 		tok
 	}
 
+	TokenMod struct {
+		tok
+	}
+
 	TokenIdent struct {
 		value string
 		tok
@@ -110,6 +133,7 @@ type (
 
 	TokenNumber struct {
 		value string
+		kind  numberKind
 		tok
 	}
 
@@ -177,6 +201,8 @@ func tokToString(token Token) string {
 		return "TokenMul"
 	case *TokenDiv:
 		return "TokenDiv"
+	case *TokenMod:
+		return "TokenMod"
 	case *TokenString:
 		return "TokenString"
 	case *TokenIf:

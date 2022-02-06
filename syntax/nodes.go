@@ -11,14 +11,54 @@ const (
 	Minus                              // -
 	Mul                                // *
 	Div                                // /
+	Mod                                // %
 	GreaterThan                        // >
 	GreaterThanOrEqual                 // >=
 	LessThan                           // <
 	LessThanOrEqual                    // <=
 	Equal                              // ==
 	NotEqual                           // !=
+	LogicalAnd                         // &&
+	LogicalOr                          // ||
+	LogicalNot                         // !
 	InvalidOperator    = -1
 )
+
+func OperatorToString(op Operator) string {
+	switch op {
+	default:
+		return "?"
+	case Plus:
+		return "+"
+	case Minus:
+		return "-"
+	case Mul:
+		return "*"
+	case Div:
+		return "/"
+	case Mod:
+		return "%"
+	case GreaterThan:
+		return ">"
+	case GreaterThanOrEqual:
+		return ">="
+	case LessThan:
+		return "<"
+	case LessThanOrEqual:
+		return "<="
+	case Equal:
+		return "=="
+	case NotEqual:
+		return "!="
+	case LogicalAnd:
+		return "&&"
+	case LogicalOr:
+		return "||"
+	case LogicalNot:
+		return "!"
+	}
+
+}
 
 type Node interface {
 	Pos() scanner.Position
@@ -94,7 +134,7 @@ type (
 
 	// while (Cond) { Body }
 	WhileStmt struct {
-		Cond Operation
+		Cond *Operation
 		Body *BlockStmt
 		stmt
 	}
@@ -107,7 +147,7 @@ type (
 
 	// if (Cond) { Body } else ElseBody
 	IfStmt struct {
-		Cond     Operation
+		Cond     *Operation
 		Body     *BlockStmt
 		ElseBody Stmt
 		stmt

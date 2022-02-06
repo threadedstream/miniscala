@@ -10,18 +10,19 @@ var (
 )
 
 type Chunk struct {
-	funcName        string
-	instrStream     []Instruction
-	localValues     backing.ValueEnv
-	localValueTypes backing.TypeEnv
-	doesReturn      bool
+	funcName    string
+	instrStream []Instruction
+	argNames    []string // temporary solution
+	localVars   map[string]backing.Value
+	argPool     map[string]backing.Value
+	doesReturn  bool
 }
 
 func newChunk(code []Instruction, name string) Chunk {
 	chunk := Chunk{}
 	chunk.instrStream = code
-	chunk.localValues = make(backing.ValueEnv)
-	chunk.localValueTypes = make(backing.TypeEnv)
+	//chunk.argPool = make(map[string]backing.Value)
+	chunk.argNames = make([]string, 0)
 	chunk.funcName = name
 	return chunk
 }

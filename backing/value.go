@@ -24,6 +24,11 @@ type (
 		DefDeclStmt *syntax.DefDeclStmt
 		ReturnType  ValueType
 	}
+
+	ArrayValue struct {
+		Arr         []Value
+		ElementType ValueType
+	}
 )
 
 func NullValue() Value {
@@ -32,14 +37,24 @@ func NullValue() Value {
 	}
 }
 
+func ArrayOfValues(num int, ty ValueType) []Value {
+	var arr []Value
+	for i := 0; i < num; i++ {
+		arr = append(arr, Value{
+			ValueType: ty,
+		})
+	}
+	return arr
+}
+
 func (v Value) AsFloat() float64 {
 	assert.Assert(v.IsFloat(), "cannot cast value type %s to float", ValueTypeToStr(v.ValueType))
 	return v.Value.(float64)
 }
 
-func (v Value) AsInt() int {
+func (v Value) AsInt() int64 {
 	assert.Assert(v.IsInt(), "cannot cast value type %s to int", ValueTypeToStr(v.ValueType))
-	return v.Value.(int)
+	return v.Value.(int64)
 }
 
 func (v Value) AsString() string {
@@ -64,8 +79,13 @@ func (v Value) IsFloat() bool {
 }
 
 func (v Value) IsInt() bool {
-	_, ok := v.Value.(int)
-	return ok
+	//_, ok := v.Value.(int)
+	//return ok
+	return v.ValueType == Int
+}
+
+func (v Value) IsArray() bool {
+	return v.ValueType == Array
 }
 
 // thought it might be worthwhile putting it here
@@ -110,21 +130,36 @@ func Add(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 		}
 	}
 
-	switch v1.ValueType {
+	switch {
 	default:
 		return Value{
 			Value:     nil,
 			ValueType: Undefined,
 		}
-	case Float:
+	case v1.IsFloat() && v2.IsFloat():
 		return Value{
 			Value:     v1.AsFloat() + v2.AsFloat(),
 			ValueType: Float,
 		}
-	case String:
+	case v1.IsString() && v2.IsString():
 		return Value{
 			Value:     v1.AsString() + v2.AsString(),
 			ValueType: String,
+		}
+	case v1.IsInt() && v2.IsInt():
+		return Value{
+			Value:     v1.AsInt() + v2.AsInt(),
+			ValueType: Int,
+		}
+	case v1.IsFloat() && v2.IsInt():
+		return Value{
+			Value:     v1.AsFloat() + float64(v2.AsInt()),
+			ValueType: Float,
+		}
+	case v1.IsInt() && v2.IsFloat():
+		return Value{
+			Value:     float64(v1.AsInt()) + v2.AsFloat(),
+			ValueType: Float,
 		}
 	}
 }
@@ -139,16 +174,31 @@ func Sub(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 		}
 	}
 
-	switch v1.Value.(type) {
-	case float64:
-		return Value{
-			Value:     v1.AsFloat() - v2.AsFloat(),
-			ValueType: Float,
-		}
+	switch {
 	default:
 		return Value{
 			Value:     nil,
 			ValueType: Undefined,
+		}
+	case v1.IsFloat() && v2.IsFloat():
+		return Value{
+			Value:     v1.AsFloat() - v2.AsFloat(),
+			ValueType: Float,
+		}
+	case v1.IsInt() && v2.IsInt():
+		return Value{
+			Value:     v1.AsInt() - v2.AsInt(),
+			ValueType: Int,
+		}
+	case v1.IsFloat() && v2.IsInt():
+		return Value{
+			Value:     v1.AsFloat() - float64(v2.AsInt()),
+			ValueType: Float,
+		}
+	case v1.IsInt() && v2.IsFloat():
+		return Value{
+			Value:     float64(v1.AsInt()) - v2.AsFloat(),
+			ValueType: Float,
 		}
 	}
 }
@@ -163,15 +213,30 @@ func Mul(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 		}
 	}
 
-	switch v1.Value.(type) {
+	switch {
 	default:
 		return Value{
 			Value:     nil,
 			ValueType: Undefined,
 		}
-	case float64:
+	case v1.IsFloat() && v2.IsFloat():
 		return Value{
 			Value:     v1.AsFloat() * v2.AsFloat(),
+			ValueType: Float,
+		}
+	case v1.IsInt() && v2.IsInt():
+		return Value{
+			Value:     v1.AsInt() * v2.AsInt(),
+			ValueType: Int,
+		}
+	case v1.IsFloat() && v2.IsInt():
+		return Value{
+			Value:     v1.AsFloat() * float64(v2.AsInt()),
+			ValueType: Float,
+		}
+	case v1.IsInt() && v2.IsFloat():
+		return Value{
+			Value:     float64(v1.AsInt()) * v2.AsFloat(),
 			ValueType: Float,
 		}
 	}
@@ -187,16 +252,76 @@ func Div(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
 		}
 	}
 
-	switch v1.Value.(type) {
+	switch {
 	default:
 		return Value{
 			Value:     nil,
 			ValueType: Undefined,
 		}
-	case float64:
+	case v1.IsFloat() && v2.IsFloat():
 		return Value{
 			Value:     v1.AsFloat() / v2.AsFloat(),
 			ValueType: Float,
+		}
+	case v1.IsInt() && v2.IsInt():
+		return Value{
+			Value:     float64(v1.AsInt()) / float64(v2.AsInt()),
+			ValueType: Float,
+		}
+	case v1.IsFloat() && v2.IsInt():
+		return Value{
+			Value:     v1.AsFloat() / float64(v2.AsInt()),
+			ValueType: Float,
+		}
+	case v1.IsInt() && v2.IsFloat():
+		return Value{
+			Value:     float64(v1.AsInt()) / v2.AsFloat(),
+			ValueType: Float,
+		}
+	}
+}
+
+func Mod(v1, v2 Value, localEnv ValueEnv, ctx ExecutionContext) Value {
+	switch {
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	case v1.IsInt() && v2.IsInt():
+		return Value{
+			Value:     v1.AsInt() % v2.AsInt(),
+			ValueType: Int,
+		}
+	}
+}
+
+func LogicalAnd(v1, v2 Value) Value {
+	switch {
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	case v1.IsBool() && v2.IsBool():
+		return Value{
+			Value:     v1.AsBool() && v2.AsBool(),
+			ValueType: Bool,
+		}
+	}
+}
+
+func LogicalOr(v1, v2 Value) Value {
+	switch {
+	default:
+		return Value{
+			Value:     nil,
+			ValueType: Undefined,
+		}
+	case v1.IsBool() && v2.IsBool():
+		return Value{
+			Value:     v1.AsBool() || v2.AsBool(),
+			ValueType: Bool,
 		}
 	}
 }

@@ -165,6 +165,14 @@ func (cs *CharScanner) tokenize() Token {
 				pos: pos,
 			},
 		}
+	case '%':
+		pos := cs.s.Pos()
+		cs.s.Next()
+		return &TokenMod{
+			tok: tok{
+				pos: pos,
+			},
+		}
 	case '>':
 		pos := cs.s.Pos()
 		cs.s.Next()
@@ -204,6 +212,32 @@ func (cs *CharScanner) tokenize() Token {
 		cs.s.Next()
 		if cs.s.Peek() == '=' {
 			return &TokenNotEqual{
+				tok: tok{
+					pos: pos,
+				},
+			}
+		}
+		return &TokenLogicalNot{
+			tok: tok{
+				pos: pos,
+			},
+		}
+	case '&':
+		pos := cs.s.Pos()
+		cs.s.Next()
+		if cs.s.Peek() == '&' {
+			cs.s.Next()
+			return &TokenLogicalAnd{
+				tok: tok{
+					pos: pos,
+				},
+			}
+		}
+	case '|':
+		pos := cs.s.Pos()
+		cs.s.Next()
+		if cs.s.Peek() == '|' {
+			return &TokenLogicalOr{
 				tok: tok{
 					pos: pos,
 				},
@@ -266,19 +300,46 @@ func isCommentStart(c1, c2 rune) bool {
 
 func (cs *CharScanner) tokenizeNumber() *TokenNumber {
 	var digits []rune
+	kind := integer
 	for unicode.IsDigit(cs.s.Peek()) {
 		digits = append(digits, cs.s.Peek())
 		cs.s.Next()
 	}
-	return &TokenNumber{value: string(digits)}
+
+	// this is a float number
+	if cs.s.Peek() == '.' {
+		// append the dot
+		digits = append(digits, cs.s.Peek())
+		cs.s.Next()
+		for unicode.IsDigit(cs.s.Peek()) {
+			digits = append(digits, cs.s.Peek())
+			cs.s.Next()
+		}
+		kind = float
+	}
+
+	return &TokenNumber{value: string(digits), kind: kind}
 }
 
 func (cs *CharScanner) tokenizeString() *TokenString {
 	var tokenValue []rune
 	for cs.s.Peek() != '"' {
+		// handling escape sequences
+		if cs.s.Peek() == '\\' {
+			cs.s.Next()
+			switch cs.s.Peek() {
+			case 'n':
+				tokenValue = append(tokenValue, '\n')
+			case 'r':
+				tokenValue = append(tokenValue, '\r')
+			}
+			cs.s.Next()
+			continue
+		}
 		tokenValue = append(tokenValue, cs.s.Peek())
 		cs.s.Next()
 	}
+
 	// eat the trailing '"'
 	cs.s.Next()
 

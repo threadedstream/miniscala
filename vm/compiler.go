@@ -8,7 +8,7 @@ import (
 
 var (
 	// TODO(threadedstream): add more reserved functions
-	reservedFuncNames = [...]string{"print"}
+	reservedFuncNames = [...]string{"print", "to_string"}
 )
 
 type compiler struct {
@@ -103,7 +103,7 @@ func (c *compiler) compileVarDeclStmt(stmt syntax.Stmt) {
 
 func (c *compiler) compileIfStmt(stmt syntax.Stmt) {
 	ifStmt := stmt.(*syntax.IfStmt)
-	c.compileExpr(&ifStmt.Cond)
+	c.compileExpr(ifStmt.Cond)
 	jmpIfFalseInstr := &InstrJmpIfFalse{}
 	c.code = append(c.code, jmpIfFalseInstr)
 	priorCodeLen := len(c.code)
@@ -127,7 +127,7 @@ func (c *compiler) compileAssignment(stmt syntax.Stmt) {
 func (c *compiler) compileWhileStmt(stmt syntax.Stmt) {
 	whileStmt := stmt.(*syntax.WhileStmt)
 	unCondJmpInit := len(c.code)
-	c.compileExpr(&whileStmt.Cond)
+	c.compileExpr(whileStmt.Cond)
 	jmpIfFalseInstr := &InstrJmpIfFalse{}
 	c.code = append(c.code, jmpIfFalseInstr)
 	priorCodeLen := len(c.code)
@@ -142,8 +142,11 @@ func (c *compiler) compileWhileStmt(stmt syntax.Stmt) {
 func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 	defStmt := stmt.(*syntax.DefDeclStmt)
 	chunk := newChunk(nil, defStmt.Name.Value)
+
+	// TODO(threadedstream): consider using anything other than map to store
+	// argument names. The slice seems a pretty suitable choice, but where to store it?
 	for _, param := range defStmt.ParamList {
-		chunk.localValues[param.Name.Value] = backing.NullValue()
+		chunk.argNames = append(chunk.argNames, param.Name.Value)
 	}
 
 	chunk.doesReturn = defStmt.ReturnType.(*syntax.Name).Value != "Unit"
@@ -156,7 +159,7 @@ func (c *compiler) compileDefDeclStmt(stmt syntax.Stmt) {
 		break
 	}
 
-	// dirty hack to mutate an element in a map
+	// dirty hack to mutate an element in a map (not a hack at all)
 	chunk = chunkStore[defStmt.Name.Value]
 
 	// allocate a space for an instruction buffer
@@ -178,6 +181,8 @@ func (c *compiler) compileExpr(expr syntax.Expr) {
 		c.compileName(expr)
 	case *syntax.Operation:
 		c.compileOperation(expr)
+	case *syntax.Call:
+		c.compileCall(expr)
 	}
 }
 
@@ -213,12 +218,9 @@ func (c *compiler) compileName(expr syntax.Expr) {
 }
 
 func (c *compiler) compileCall(expr syntax.Expr) {
-	var (
-		chunk Chunk
-		call  = expr.(*syntax.Call)
-	)
+	call := expr.(*syntax.Call)
 
-	chunk = lookupChunk(call.CalleeName.Value, true, nil)
+	chunk := lookupChunk(call.CalleeName.Value, false, nil)
 
 	callInstr := &InstrCall{
 		FuncName: call.CalleeName.Value,
@@ -228,9 +230,7 @@ func (c *compiler) compileCall(expr syntax.Expr) {
 		c.compileExpr(arg)
 	}
 
-	for k, _ := range chunk.localValues {
-		callInstr.ArgNames = append(callInstr.ArgNames, k)
-	}
+	callInstr.ArgNames = chunk.argNames
 
 	c.code = append(c.code, callInstr)
 }
@@ -238,14 +238,26 @@ func (c *compiler) compileCall(expr syntax.Expr) {
 func (c *compiler) compileOperation(expr syntax.Expr) {
 	operation := expr.(*syntax.Operation)
 	c.compileExpr(operation.Lhs)
-	c.compileExpr(operation.Rhs)
+	if operation.Rhs != nil {
+		c.compileExpr(operation.Rhs)
+	}
 	switch operation.Op {
 	default:
 		// TODO(threadedstream): handle an error
-		panic("")
+		panic("unknown operator")
 	case syntax.Plus:
 		c.code = append(c.code, &InstrAdd{})
 	case syntax.Minus:
+		if operation.Rhs == nil {
+			// This is a unary minus operator. Currently, unary minus operator is handled
+			// by multiplying the number by -1
+			c.code = append(c.code, &InstrLoadImm{Value: backing.Value{
+				Value:     int64(-1),
+				ValueType: backing.Int,
+			}})
+			c.code = append(c.code, &InstrMul{})
+			break
+		}
 		c.code = append(c.code, &InstrSub{})
 	case syntax.Mul:
 		c.code = append(c.code, &InstrMul{})
@@ -261,6 +273,14 @@ func (c *compiler) compileOperation(expr syntax.Expr) {
 		c.code = append(c.code, &InstrLessThanOrEqual{})
 	case syntax.Equal:
 		c.code = append(c.code, &InstrEqual{})
+	case syntax.Mod:
+		c.code = append(c.code, &InstrMod{})
+	case syntax.LogicalAnd:
+		c.code = append(c.code, &InstrLogicalAnd{})
+	case syntax.LogicalOr:
+		c.code = append(c.code, &InstrLogicalOr{})
+	case syntax.LogicalNot:
+		c.code = append(c.code, &InstrLogicalNot{})
 	}
 }
 

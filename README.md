@@ -24,3 +24,6 @@ Voici un exemple of the program written in miniscala
 ```
 
 For more examples, refer to source files located under the "sources" folder. 
+
+# Warning
+Currently, tree-walk interpreter doesn't work
